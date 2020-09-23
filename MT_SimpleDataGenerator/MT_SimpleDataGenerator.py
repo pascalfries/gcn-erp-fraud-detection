@@ -3,7 +3,6 @@ import database_config
 from generators.ProductGenerator import ProductGenerator
 from generators.CustomersGenerator import CustomersGenerator
 from generators.SalespersonsGenerator import SalespersonsGenerator
-from graph.GraphGenerator import GraphGenerator
 from simulation.Simulation import Simulation
 from simulation.agents.Customer import Customer
 from simulation.agents.Fraudster import Fraudster
@@ -96,13 +95,3 @@ if cfg.CONF_RUN_SIMULATION:
     simulation.run()
 
     database_config.db.save(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
-else:
-    database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
-
-graph_gen = GraphGenerator(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
-graphs = graph_gen.generate_graphs_sliding_window(window_duration=2)
-
-with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:
-    for index, history_item in enumerate(graphs):
-        history_item['graph'].export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHS}\{history_item["db"].get_name()}.txt')
-        print(f'dot -Tsvg {history_item["db"].get_name()}.txt -o graph_{history_item["db"].get_name()}.svg', file=graphviz_script)

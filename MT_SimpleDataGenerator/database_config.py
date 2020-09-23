@@ -8,7 +8,7 @@ from data.ForeignKey import ForeignKey
 # ===============================================================
 db = Database('SDG_DATA')
 
-# TABLE: PRODUCTS - GEN DONE
+# TABLE: PRODUCTS
 table_products = DataTable('MST_PRODUCTS', True)
 table_products.add_columns([DataColumn('id', True), DataColumn('name'), DataColumn('price')])
 db.add_table(table_products)
@@ -23,15 +23,20 @@ table_sale_products = DataTable('TRM_SALE_PRODUCTS', is_mapping_table=True)
 table_sale_products.add_columns([DataColumn('product_id', True), DataColumn('sale_id', True), DataColumn('amount'), DataColumn('timestamp', is_timestamp=True)])
 db.add_table(table_sale_products)
 
-# TABLE: CUSTOMERS - GEN DONE
+# TABLE: CUSTOMERS
 table_customers = DataTable('MST_CUSTOMERS', True)
-table_customers.add_columns([DataColumn('id', True), DataColumn('name'), DataColumn('address')])
+table_customers.add_columns([DataColumn('id', True), DataColumn('name'), DataColumn('address_id')])
 db.add_table(table_customers)
 
-# TABLE: SALESPERSONS - GEN DONE
+# TABLE: SALESPERSONS
 table_salespersons = DataTable('MST_SALESPERSONS', True)
-table_salespersons.add_columns([DataColumn('id', True), DataColumn('name')])
+table_salespersons.add_columns([DataColumn('id', True), DataColumn('name'), DataColumn('address_id')])
 db.add_table(table_salespersons)
+
+# TABLE: ADDRESSES
+table_addresses = DataTable('MST_ADDRESSES', True)
+table_addresses.add_columns([DataColumn('id', True), DataColumn('street'), DataColumn('house_number'), DataColumn('city'), DataColumn('zip_code')])
+db.add_table(table_addresses)
 
 # ===============================================================
 # ========================= TABLE KEYS ==========================
@@ -41,3 +46,5 @@ db.add_foreign_key(ForeignKey('key_saleproducts_product', 'TRM_SALE_PRODUCTS', '
 db.add_foreign_key(ForeignKey('key_sales_salesperson', 'TRC_SALES', 'salesperson_id', 'MST_SALESPERSONS', 'id', reverse_relation=True))
 db.add_foreign_key(ForeignKey('key_sales_customer', 'TRC_SALES', 'customer_id', 'MST_CUSTOMERS', 'id', reverse_relation=True, color='darkorchid3'))
 db.add_foreign_key(ForeignKey('key_changes_salesperson', 'MTA_CHANGES', 'salesperson_id', 'MST_SALESPERSONS', 'id', reverse_relation=True))
+db.add_foreign_key(ForeignKey('key_salesperson_address', 'MST_SALESPERSONS', 'address_id', 'MST_ADDRESSES', 'id'))
+db.add_foreign_key(ForeignKey('key_customer_address', 'MST_CUSTOMERS', 'address_id', 'MST_ADDRESSES', 'id'))

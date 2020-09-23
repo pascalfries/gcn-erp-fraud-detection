@@ -73,15 +73,17 @@ class DataTable:
     def link_database(self, db):
         self._parent_db = db
 
-    def insert_record(self, record, is_fraud: bool = False, changed_by=0) -> None:
-        self.insert_record_with_id(len(self._data), record, is_fraud, changed_by)
+    def insert_record(self, record, is_fraud: bool = False, changed_by=0) -> int:
+        return self.insert_record_with_id(len(self._data), record, is_fraud, changed_by)
 
-    def insert_record_with_id(self, new_id: int, record, is_fraud: bool = False, changed_by=0) -> None:
+    def insert_record_with_id(self, new_id: int, record, is_fraud: bool = False, changed_by=0) -> int:
         self._data.loc[new_id] = record
 
         if self._trace_changes and self._enable_tracing:
             change_record = [f'{self._name}.*', new_id, 'create', None, self._data.loc[new_id].to_dict(), changed_by, self._parent_db.get_simulation_time(), is_fraud]
             self._parent_db.get_changelog().insert_record(change_record)
+
+        return new_id
 
     def insert_records(self, records: list, is_fraud: bool = False, changed_by=0) -> None:
         for record in records:
