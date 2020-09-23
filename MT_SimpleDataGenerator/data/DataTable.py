@@ -44,6 +44,9 @@ class DataTable:
     def get_data(self) -> pd.DataFrame:
         return self._data
 
+    def set_data(self, new_data: pd.DataFrame) -> None:
+        self._data = new_data
+
     def get_data_is_time_dependent(self) -> bool:
         for column in self._columns.values():
             if column.get_is_timestamp():

@@ -74,22 +74,35 @@ if cfg.CONF_RUN_SIMULATION:
     simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 1', fraudster_salesperson_id=6, buyer_customer_id=89, products_to_buy=[
         FraudPurchaseDefinition(product_id=46, new_product_price_percent=0.90, purchase_amount=1, purchase_time=123),
         FraudPurchaseDefinition(product_id=10, new_product_price_percent=0.75, purchase_amount=2, purchase_time=613),
-        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.30, purchase_amount=2, purchase_time=722),
+        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.70, purchase_amount=2, purchase_time=722),
+    ]))
+
+    simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 2', fraudster_salesperson_id=6, buyer_customer_id=64, products_to_buy=[
+        FraudPurchaseDefinition(product_id=42, new_product_price_percent=0.80, purchase_amount=1, purchase_time=162),
+        FraudPurchaseDefinition(product_id=34, new_product_price_percent=0.85, purchase_amount=1, purchase_time=466),
     ]))
 
     # Patient Fraudsters
     simulation.add_agent(Fraudster(name='Patient Fraudster 1', fraudster_salesperson_id=4, buyer_customer_id=55, products_to_buy=[
-        FraudPurchaseDefinition(product_id=80, new_product_price_percent=0.20, purchase_amount=2, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=10),
+        FraudPurchaseDefinition(product_id=80, new_product_price_percent=0.90, purchase_amount=2, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=10),
+    ]))
+
+    simulation.add_agent(Fraudster(name='Patient Fraudster 1', fraudster_salesperson_id=4, buyer_customer_id=44, products_to_buy=[
         FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.90, purchase_amount=1, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=237),
-        FraudPurchaseDefinition(product_id=32, new_product_price_percent=0.80, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=3, purchase_time=321),
-        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.45, purchase_amount=2, price_buy_to_increment_delay=3, price_decrease_to_buy_delay=3, purchase_time=699),
+        FraudPurchaseDefinition(product_id=32, new_product_price_percent=0.75, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=3, purchase_time=321),
+        FraudPurchaseDefinition(product_id=86, new_product_price_percent=0.91, purchase_amount=3, price_buy_to_increment_delay=4, price_decrease_to_buy_delay=2, purchase_time=413),
+        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.80, purchase_amount=2, price_buy_to_increment_delay=3, price_decrease_to_buy_delay=3, purchase_time=699),
     ]))
 
     # Stealthy Fraudsters
     simulation.add_agent(Fraudster(name='Stealthy Fraudster 1', fraudster_salesperson_id=4, buyer_customer_id=26, products_to_buy=[
-        FraudPurchaseDefinition(product_id=67, new_product_price_percent=0.30, purchase_amount=1, price_decrease_increments=8, price_increase_increments=5, purchase_time=100),
+        FraudPurchaseDefinition(product_id=67, new_product_price_percent=0.80, purchase_amount=1, price_decrease_increments=8, price_increase_increments=5, purchase_time=100),
         FraudPurchaseDefinition(product_id=21, new_product_price_percent=0.55, purchase_amount=2, price_decrease_increments=5, price_increase_increments=5, purchase_time=356),
         FraudPurchaseDefinition(product_id=87, new_product_price_percent=0.75, purchase_amount=1, price_decrease_increments=20, price_decrease_to_buy_delay=30, price_buy_to_increment_delay=10, price_increase_increments=5, purchase_time=103),
+    ]))
+
+    simulation.add_agent(Fraudster(name='Stealthy Fraudster 2', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
+        FraudPurchaseDefinition(product_id=94, new_product_price_percent=0.95, purchase_amount=40, price_decrease_increments=3, price_increase_increments=3, purchase_time=216),
     ]))
 
     simulation.run()

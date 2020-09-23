@@ -1,10 +1,15 @@
 from typing import List, Dict
 from graph.Node import Node
+import pickle
 
 
 class Graph:
-    def __init__(self):
+    def __init__(self, name: str):
+        self._name: str = name
         self._nodes: List = []
+
+    def get_name(self) -> str:
+        return self._name
 
     def get_node_by_index(self, index: int) -> Node:
         return self._nodes[index]
@@ -33,3 +38,7 @@ class Graph:
         f = open(filename, 'w')
         f.write('digraph G {\nnode [shape=box,color=black,fontname=Arial,labelloc=c];\nedge [color=gray50,style=bold];\n\n' + node_string + '\n}')
         f.close()
+
+    def save(self, filename: str) -> None:
+        with open(filename, 'wb') as graph_file:
+            pickle.dump(self, graph_file)

@@ -1,6 +1,7 @@
 from typing import List, Dict
 from graph.Graph import Graph
 from data.Database import Database
+from graph.GraphCollection import GraphCollection
 
 
 class GraphGenerator:
@@ -13,12 +14,12 @@ class GraphGenerator:
         self._default_node_color = default_node_color
         self._fraud_node_color = fraud_node_color
 
-    def generate_graphs(self, databases: List[Database]) -> List[Graph]:
-        return list(map(lambda db: self.generate_graph(db), databases))
+    def generate_graphs(self, databases: List[Database]) -> GraphCollection:
+        return GraphCollection(list(map(lambda db: self.generate_graph(db), databases)))
 
     def generate_graph(self, db: Database) -> Graph:
         print(f'generating graph for {db.get_name()}')
-        graph = Graph()
+        graph = Graph(name=db.get_name())
 
         # generate nodes
         for table in db.get_tables():

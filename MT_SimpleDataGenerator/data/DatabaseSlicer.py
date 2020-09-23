@@ -41,9 +41,15 @@ class DatabaseSlicer:
             for table in new_db.get_tables():
                 for column in table.get_columns().values():
                     if column.get_is_timestamp():
-                        for index, record in table.get_data().iterrows():
-                            if record[column.get_name()] < start_time or record[column.get_name()] > end_time:
-                                table.remove_record(index)
+                        table_data = table.get_data()
+                        # invert filter and replace entire data-backing df
+                        records_to_keep = table_data[(table_data[column.get_name()] >= start_time) & (table_data[column.get_name()] <= end_time)]
+                        table.set_data(records_to_keep)
+
+                        # records_to_remove = table_data[(table_data[column.get_name()] < start_time) | (table_data[column.get_name()] > end_time)]
+                        #
+                        # for index, record in records_to_remove.iterrows():
+                        #     table.remove_record(index)
 
                         break
 

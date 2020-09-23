@@ -8,7 +8,7 @@ from generators.helper import get_random_name, get_random_address
 class CustomersGenerator(TableGeneratorInterface):
     def generate(self, db: Database) -> List:
         salespersons = db.get_table('MST_SALESPERSONS')
-        customer_salesperson_mapping = {6: 6, 85: 1, 28: 3, 14: 8} # x:y -> customer x is salesperson y
+        customer_salesperson_mapping = {6: 6, 85: 1, 28: 3, 14: 8, 55: 4} # x:y -> customer x is salesperson y
         customers = []
 
         for id in range(cfg.INIT_GEN_CUSTOMER_COUNT):
