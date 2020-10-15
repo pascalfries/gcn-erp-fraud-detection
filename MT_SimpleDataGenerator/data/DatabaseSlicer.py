@@ -21,9 +21,9 @@ class DatabaseSlicer:
             new_db.set_name(f'{new_db.get_name()}_{start_time}_{end_time}')
             print(f'---> GENERATING DB WINDOW {new_db.get_name()} FOR INTERVAL [{start_time}; {end_time}]')
 
-            changes_to_undo = changes_table[(changes_table['timestamp'] > end_time)]
+            changes_to_undo = changes_table[(changes_table['timestamp'] >= end_time)]
 
-            for index, change_record in changes_to_undo[::1].iterrows():
+            for index, change_record in changes_to_undo[::-1].iterrows():
                 # print(f'REVERTING change {index}')
                 dst_table_name, dst_column_name = change_record['table_column_ref'].split('.', 2)
 

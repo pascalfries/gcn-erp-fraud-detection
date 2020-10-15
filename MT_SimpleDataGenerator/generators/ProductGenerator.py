@@ -7,4 +7,4 @@ import config as cfg
 
 class ProductGenerator(TableGeneratorInterface):
     def generate(self, db: Database) -> List:
-        return [[f'Produkt {id}', random.randrange(1, 401)] for id in range(cfg.INIT_GEN_PRODUCT_COUNT)]
+        return [[f'Product {id}', random.randrange(1, 401)] for id in range(cfg.INIT_GEN_PRODUCT_COUNT)]

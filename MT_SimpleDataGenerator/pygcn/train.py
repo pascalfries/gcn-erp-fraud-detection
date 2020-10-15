@@ -39,7 +39,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data()
+adj, features, labels, idx_train, idx_val, idx_test = load_data(path="./data/cora/", dataset='cora', train_size=400, validation_size=50)
 
 # Model and optimizer
 model = GCN(nfeat=features.shape[1],

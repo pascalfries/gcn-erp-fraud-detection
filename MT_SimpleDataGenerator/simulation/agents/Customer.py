@@ -34,7 +34,7 @@ class Customer(AgentInterface):
             salespersons_table = db.get_table('MST_SALESPERSONS')
 
             salesperson_id = self._use_salesperson_id if self._use_salesperson_id is not None else salespersons_table.get_random_item_id()
-            sales_table.insert_record([f'Purchase of {self._name}', self._customer_id, salesperson_id, simulation.get_current_time()])
+            sales_table.insert_record([f'Purchase of {self._name}', self._customer_id, salesperson_id, False, simulation.get_current_time()])
 
             purchased_products = []
             for product_count in range(random.randint(self._min_product_count, self._max_product_count)):

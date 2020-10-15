@@ -12,7 +12,7 @@ STORAGE_BASE_PATH_PLOTS = r'C:\Users\Pasi\Documents (offline)\Data Thesis Simula
 
 # runtime setup
 CONF_GENERATE_MASTER_DATA = False
-CONF_RUN_SIMULATION = True
+CONF_RUN_SIMULATION = False
 
 # initial master data generator setup
 INIT_GEN_CUSTOMER_COUNT = 100

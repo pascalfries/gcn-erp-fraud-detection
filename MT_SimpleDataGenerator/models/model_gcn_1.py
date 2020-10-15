@@ -1,13 +1,17 @@
 from __future__ import division
 from __future__ import print_function
 import pandas as pd
+import scipy.sparse as sp
 from bunch import Bunch
+from sklearn.metrics import accuracy_score
+
 import database_config
 import config as cfg
 from data.DatabaseSlicer import DatabaseSlicer
 from graph.GraphGenerator import GraphGenerator
 from graph.GraphCollection import GraphCollection
 
+import random
 import time
 import argparse
 import numpy as np
@@ -16,8 +20,38 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-from pygcn.utils import load_data, accuracy
+from pygcn.utils import load_data, accuracy, encode_onehot
 from pygcn.models import GCN
+
+
+# helpers
+def readout_output(output, mode: str = 'node'):
+    if mode == 'node':
+        return output
+    elif mode == 'graph':
+        contains_fraud = any([node[1] >= node[0] for node in output])
+        return torch.tensor([[0.001, 0.999] if contains_fraud else [0.999, 0.001]])
+
+
+def readout_labels(labels, mode: str = 'node'):
+    if mode == 'node':
+        return labels
+    elif mode == 'graph':
+        return torch.tensor([int(sum(labels).item() > 0)], dtype=torch.long)
+
+
+def is_fraud_output(output, mode: str = 'node'):
+    if mode == 'node':
+        return output
+    elif mode == 'graph':
+        return any([node[1] >= node[0] for node in output])
+
+
+def if_fraud_target(labels, mode: str = 'node'):
+    if mode == 'node':
+        return labels
+    elif mode == 'graph':
+        return sum(labels).item() > 0
 
 # Get Data
 database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
@@ -36,10 +70,10 @@ else:
     graphs = GraphCollection()
     graphs.load(cfg.STORAGE_BASE_PATH_PY_GRAPHS)
 
-# with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:
-#     for index, history_item in enumerate(graphs):
-#         history_item.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\{history_item.get_name()}.txt')
-#         print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg', file=graphviz_script)
+with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:
+    for index, history_item in enumerate(graphs.get_raw_list()):
+        history_item.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\{history_item.get_name()}.txt')
+        print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg', file=graphviz_script)
 
 
 # Training settings
@@ -51,6 +85,7 @@ parser.add_argument('--lr', type=float, default=0.01,  help='Initial learning ra
 parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--hidden', type=int, default=16, help='Number of hidden units.')
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
+parser.add_argument('--classification_mode', type=str, default='node', help='Node- vs Graph-level classification (values: node, graph))')
 
 args = parser.parse_args()
 
@@ -58,12 +93,32 @@ np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data(path="../pygcn/data/cora/")
+dataset = []
+graphs.save_numpy(r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20\MT - Master Thesis\Simulator and Models\MT_SimpleDataGenerator\pygcn\data\sdg_fraud\\', ['price', 'new_value', 'old_value'])
+
+for graph in graphs.get_raw_list():
+    adj, features, labels, idx_train, idx_val, idx_test = load_data(path="../pygcn/data/sdg_fraud/", dataset=graph.get_name(), train_size=len(graph) - 1, validation_size=0)
+
+    dataset.append(Bunch(
+        name=graph.get_name(),
+        adj=adj,
+        features=features,
+        # labels_raw=labels,
+        labels=readout_labels(labels, args.classification_mode),
+        idx_train=idx_train,
+        idx_val=idx_val,
+        idx_test=idx_test
+    ))
+
+random.shuffle(dataset)
+TRAIN_SET = dataset[:550]
+VALIDATION_SET = dataset[550:600]
+TEST_SET = dataset[550:-1]
 
 # Model and optimizer
-model = GCN(nfeat=features.shape[1],
+model = GCN(nfeat=dataset[0].features.shape[1],
             nhid=args.hidden,
-            nclass=labels.max().item() + 1,
+            nclass=2,
             dropout=args.dropout)
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -71,44 +126,82 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_
 def train(epoch):
     t = time.time()
     model.train()
-    optimizer.zero_grad()
-    output = model(features, adj)
-    loss_train = F.nll_loss(output[idx_train], labels[idx_train])
-    acc_train = accuracy(output[idx_train], labels[idx_train])
-    loss_train.backward()
-    optimizer.step()
+
+    avg_loss_train = 0
+    avg_acc_train = 0
+    avg_loss_validation = 0
+    avg_acc_validation = 0
+
+    for dataitem in TRAIN_SET:
+        # print(f'Traing {dataitem.name}')
+        optimizer.zero_grad()
+
+        output = model(dataitem.features, dataitem.adj)
+        output_transformed = readout_output(output, args.classification_mode)
+
+        loss_train = F.nll_loss(output_transformed, dataitem.labels)
+        avg_acc_train += accuracy(output_transformed, dataitem.labels).item() / len(TRAIN_SET)
+
+        avg_loss_train += loss_train.item()
+
+        loss_train.backward()
+        optimizer.step()
 
     if not args.fastmode:
-        # Evaluate validation set performance separately,
-        # deactivates dropout during validation run.
-        model.eval()
-        output = model(features, adj)
+        for dataitem in VALIDATION_SET:
+            model.eval()
+            output = model(dataitem.features, dataitem.adj)
 
-    loss_val = F.nll_loss(output[idx_val], labels[idx_val])
-    acc_val = accuracy(output[idx_val], labels[idx_val])
+            output_transformed = readout_output(output, args.classification_mode)
+
+            avg_loss_validation += F.nll_loss(output_transformed, dataitem.labels) / len(VALIDATION_SET)
+            avg_acc_validation += accuracy(output_transformed, dataitem.labels) / len(VALIDATION_SET)
+
     print('Epoch: {:04d}'.format(epoch+1),
-          'loss_train: {:.4f}'.format(loss_train.item()),
-          'acc_train: {:.4f}'.format(acc_train.item()),
-          'loss_val: {:.4f}'.format(loss_val.item()),
-          'acc_val: {:.4f}'.format(acc_val.item()),
+          'loss_train: {:.4f}'.format(avg_loss_train),
+          'acc_train: {:.4f}'.format(avg_acc_train),
+          'loss_val: {:.4f}'.format(avg_loss_validation),
+          'acc_val: {:.4f}'.format(avg_acc_validation),
           'time: {:.4f}s'.format(time.time() - t))
 
 
 def test():
     model.eval()
-    output = model(features, adj)
-    loss_test = F.nll_loss(output[idx_test], labels[idx_test])
-    acc_test = accuracy(output[idx_test], labels[idx_test])
+    avg_loss_train = 0
+    avg_accuracy_train = 0
+    correct_graph_classification_count = 0
+    tp, fp, tn, fn = 0, 0, 0, 0
 
-    # print('\nRESULTS:\n---------------------')
-    # print('Accuracy:', accuracy_score(target_test, predictions))
-    # print('Confusion Matrix:\n', confusion_matrix(target_test, predictions))
-    # plot_confusion_matrix(decision_tree, data_test, target_test, cmap='RdYlGn', normalize='true')
-    # plt.show()
+    for dataitem in TEST_SET:
+        output = model(dataitem.features, dataitem.adj)
+
+        avg_loss_train += F.nll_loss(output, dataitem.labels).item() / len(TEST_SET)
+        avg_accuracy_train += accuracy(output, dataitem.labels).item() / len(TEST_SET)
+
+        pred = is_fraud_output(output, "graph")
+        gt = if_fraud_target(dataitem.labels, "graph")
+
+        if gt and pred:
+            tp += 1
+        elif not gt and not pred:
+            tn += 1
+        elif gt and not pred:
+            fn += 1
+        elif not gt and pred:
+            fp += 1
+
+        if is_fraud_output(output, "graph") == if_fraud_target(dataitem.labels, "graph"):
+            correct_graph_classification_count += 1
+            print(f'GRAPH: {dataitem.name}\nis_fraud_output: {is_fraud_output(output, "graph")}\nis_fraud_target: {if_fraud_target(dataitem.labels, "graph")}\n')
 
     print("Test set results:",
-          "loss= {:.4f}".format(loss_test.item()),
-          "accuracy= {:.4f}".format(acc_test.item()))
+          "\nloss= {:.4f}".format(avg_loss_train),
+          "\naccuracy= {:.4f}".format(avg_accuracy_train),
+          f'\ncorrect graph class.: {correct_graph_classification_count} / {len(TEST_SET)}')
+
+    print("\nConfusion Matrix (GT\\Pred.):",
+          f"\n{tn} | {fp}",
+          f"\n{fn} | {tp}")
 
 
 # Train model
@@ -121,27 +214,3 @@ print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 # Testing
 test()
-
-
-# Configuration
-TEST_SET_SIZE = 1500
-
-# Get Data
-changes_df = database_config.db.get_table('MTA_CHANGES').get_data()
-update_changes_df = pd.DataFrame(changes_df[changes_df['change_type'] == 'update'])
-
-update_changes_df['price_delta'] = update_changes_df.old_value.astype(float) - update_changes_df.new_value.astype(float)
-
-dataset = Bunch(
-    data=update_changes_df[['price_delta']].values,
-    # data=update_changes_df[['old_value', 'new_value']].values,
-    # data=update_changes_df[['old_value', 'new_value', 'salesperson_id']].values,
-    target=update_changes_df['is_fraud'].values
-)
-
-data_train = dataset.data[:-TEST_SET_SIZE]
-target_train = dataset.target[:-TEST_SET_SIZE]
-
-data_test = dataset.data[-TEST_SET_SIZE:]
-target_test = dataset.target[-TEST_SET_SIZE:]
-

@@ -117,7 +117,7 @@ class FraudPurchaseDefinition:
         return True
 
     def _schedule_fraud_purchase(self, db: Database, args: Dict) -> bool:
-        db.get_table('TRC_SALES').insert_record([f'FPurchase of Customer {args["buyer_customer_id"]}', args["buyer_customer_id"], args['fraudster_salesperson_id'], args['buy_time']])
+        db.get_table('TRC_SALES').insert_record([f'FPurchase of Customer {args["buyer_customer_id"]}', args["buyer_customer_id"], args['fraudster_salesperson_id'], True, args['buy_time']])
         db.get_table('TRM_SALE_PRODUCTS').insert_record([self._product_id, len(db.get_table('TRC_SALES')) - 1, self._purchase_amount, args['buy_time']], changed_by=args['fraudster_salesperson_id']) #  todo len() does not get ID!
 
         return True

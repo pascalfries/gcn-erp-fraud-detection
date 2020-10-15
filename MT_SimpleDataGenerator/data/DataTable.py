@@ -156,7 +156,7 @@ class DataTable:
             )
 
     def copy(self):
-        table = DataTable(self._name, self._trace_changes, self._is_mapping_table, pd.DataFrame(self._data))
+        table = DataTable(self._name, self._trace_changes, self._is_mapping_table, self._data.copy(deep=True))
         table.add_columns(list(self._columns.values()), False)
 
         return table

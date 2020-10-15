@@ -15,7 +15,7 @@ class Database:
         self._meta_table_changes.add_columns(
             [DataColumn('id', is_primary=True), DataColumn('table_column_ref', is_hidden=True), DataColumn('record_id', is_hidden=True), DataColumn('change_type'),
              DataColumn('old_value'), DataColumn('new_value'), DataColumn('salesperson_id', is_hidden=True),
-             DataColumn('timestamp', is_timestamp=True, is_hidden=False), DataColumn('is_fraud', is_hidden=True)])
+             DataColumn('timestamp', is_timestamp=True, is_hidden=False), DataColumn('is_fraud')])
         self._meta_table_changes.link_database(self)
         self.add_table(self._meta_table_changes)
 

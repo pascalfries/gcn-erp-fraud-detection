@@ -14,6 +14,11 @@ The papers were selected in a way such that in the final corpus every paper cite
 After stemming and removing stopwords we were left with a vocabulary of size 1433 unique words. All words with document frequency less than 10 were removed.
 
 
+*********
+NOTE:
+For the sake of consistency with other graphs, the *.content-file has been renamed to .vertices and the *.cites-file has been renamed to .edges
+*********
+
 THE DIRECTORY CONTAINS TWO FILES:
 
 The .content file contains descriptions of the papers in the following format:
