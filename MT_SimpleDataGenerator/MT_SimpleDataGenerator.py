@@ -8,6 +8,8 @@ from simulation.agents.Customer import Customer
 from simulation.agents.Fraudster import Fraudster
 from simulation.agents.SalesPerson import Salesperson
 from fraud.FraudPurchaseDefinition import FraudPurchaseDefinition
+from data.DatabaseSlicer import DatabaseSlicer
+from graph.GraphGenerator import GraphGenerator
 import config as cfg
 
 
@@ -108,3 +110,17 @@ if cfg.CONF_RUN_SIMULATION:
     simulation.run()
 
     database_config.db.save(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
+
+if cfg.CONF_GENERATE_SLICES_AND_GRAPHS:
+    db_slicer = DatabaseSlicer(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
+    slices = db_slicer.generate_slices_sliding_window(window_duration=cfg.GRAPH_SLICER_WINDOW_DURATION)
+
+    graph_gen = GraphGenerator()
+    graphs = graph_gen.generate_graphs(databases=slices)
+    graphs.save(cfg.STORAGE_BASE_PATH_PY_GRAPHS)
+
+    with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:
+        for index, history_item in enumerate(graphs.get_raw_list()):
+            history_item.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\{history_item.get_name()}.txt')
+            print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg',
+                  file=graphviz_script)

@@ -4,7 +4,7 @@ from typing import List, Dict
 class Node:
     __nextId: int = 1
 
-    def __init__(self, properties: Dict, key: str = None, color: str = None, node_color: str = 'black'):
+    def __init__(self, properties: Dict, key: str = None, color: str = None, node_color: str = 'black', node_type: str = 'unknown'):
         self._id: int = Node.__nextId
         Node.__nextId += 1
 
@@ -14,10 +14,17 @@ class Node:
         self._properties: Dict = properties
         self._key: str = key
         self._color: str = color
+        self._type: str = node_type
         self._node_color: str = node_color
 
     def get_id(self) -> int:
         return self._id
+
+    def get_type(self) -> str:
+        return self._type
+
+    def get_property_value(self, property_name: str):
+        return self._properties[property_name]
 
     def add_neighbor(self, neighbor, color: str = None) -> None:
         if neighbor is not None and neighbor not in self._neighbors:

@@ -30,15 +30,15 @@ class GraphGenerator:
                 properties = {column.get_name(): row[column.get_name()] for column in table.get_columns().values() if not column.get_is_primary() and not column.get_is_hidden()}
 
                 if table.get_name() == 'MTA_CHANGES':
-                    graph.add_node(properties, f'{table.get_name()}[{index}]', self._fraud_node_color if row['is_fraud'] else self._default_node_color)
+                    graph.add_node(properties, f'{table.get_name()}[{index}]', self._fraud_node_color if row['is_fraud'] else self._default_node_color, node_type=table.get_name())
                 else:
-                    graph.add_node(properties, f'{table.get_name()}[{index}]')
+                    graph.add_node(properties, f'{table.get_name()}[{index}]', node_type=table.get_name())
 
         # generate DELETE nodes from MTA_CHANGES
         for _, src_record in db.get_table('MTA_CHANGES').get_data().iterrows():
             if(src_record['change_type']) == 'delete':
                 dst_table_name, _ = src_record['table_column_ref'].split('.', 2)
-                graph.add_node(src_record['old_value'], f'{dst_table_name}[{src_record["record_id"]}]', self._fraud_node_color if src_record['is_fraud'] else self._default_node_color)
+                graph.add_node(src_record['old_value'], f'{dst_table_name}[{src_record["record_id"]}]', self._fraud_node_color if src_record['is_fraud'] else self._default_node_color, node_type='MTA_CHANGES')
 
         # generate links
         for table in db.get_tables():

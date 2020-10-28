@@ -1,16 +1,21 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from graph.Graph import Graph
 import numpy as np
+import pandas as pd
 import pickle
 import os
+import stellargraph as sg
 
 
 class GraphCollection:
-    def __init__(self, graphs: Optional[List[Graph]] = None):
+    def __init__(self, graphs: Optional[List[Graph]] = None, directory_name: Optional[str] = None):
         if graphs is None:
             graphs = []
 
         self._graphs = graphs
+
+        if directory_name is not None:
+            self.load(directory_name)
 
     def add_graph(self, graph: Graph):
         self._graphs.append(graph)
@@ -34,6 +39,9 @@ class GraphCollection:
 
             np.savetxt(directory_path + graph.get_name() + '.vertices', nodes, fmt='%s')
             np.savetxt(directory_path + graph.get_name() + '.edges', edges)
+
+    def serialize_stellargraph(self, attributes: List[str]) -> List[Tuple[sg.StellarDiGraph, pd.Series]]:
+        return list(map(lambda graph: graph.serialize_stellargraph(attributes), self._graphs))
 
     # def serialize_numpy(self, attributes: List[str]) -> (np.array, np.array):
     #     nodes = []

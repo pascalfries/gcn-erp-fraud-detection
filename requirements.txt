@@ -8,3 +8,6 @@ scikit-learn~=0.23.2
 bunch~=1.0.1
 graphviz~=0.14.1
 setuptools~=47.1.0
+stellargraph~=1.2.1
+tensorflow~=2.3.0
+tensorflow-gpu~=2.3.0
