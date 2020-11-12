@@ -16,6 +16,13 @@ class Node:
         self._color: str = color
         self._type: str = node_type
         self._node_color: str = node_color
+        self._is_found = False
+
+    def get_is_found(self) -> bool:
+        return self._is_found
+
+    def set_is_found(self, is_found: bool):
+        self._is_found = is_found
 
     def get_id(self) -> int:
         return self._id
@@ -36,6 +43,25 @@ class Node:
     def add_backreference(self, neighbor_of):
         if neighbor_of is not None and neighbor_of not in self._references:
             self._references.append(neighbor_of)
+
+    def remove_from_neighbors(self,) -> None:
+        for neighbor in (self._neighbors + self._references):
+            if self in neighbor._neighbors:
+                neighbor._neighbors.remove(self)
+
+            if self in neighbor._references:
+                neighbor._references.remove(self)
+
+    #     if neighbor is not None and neighbor in self._neighbors:
+    #         index = self._neighbors.index(neighbor)
+    #
+    #         neighbor.remove_backreference(self)
+    #         del self._neighbors[index]
+    #         del self._neighbor_colors[index]
+    #
+    # def remove_backreference(self, neighbor_of):
+    #     if neighbor_of is not None and neighbor_of in self._references:
+    #         self._references.append(neighbor_of)
 
     def get_neighbors(self) -> List:
         return self._neighbors
