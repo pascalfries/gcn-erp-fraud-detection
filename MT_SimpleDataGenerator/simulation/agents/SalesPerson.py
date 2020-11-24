@@ -1,6 +1,7 @@
 from simulation.agents.AgentInterface import AgentInterface
 from simulation.Simulation import Simulation
 from helpers import with_probability, rand_float
+import config as cfg
 
 
 class Salesperson(AgentInterface):
@@ -39,7 +40,7 @@ class Salesperson(AgentInterface):
         min_product_count = self._min_product_count
         max_product_count = self._max_product_count
 
-        if simulation.get_current_time() in [355, 720]:
+        if simulation.get_current_time() in cfg.SIMULATION_SPECIAL_EVENT_TIMES:
             tick_action_probability = 1
             price_decrease_probability = 0.85
             min_price_decrease_percentage = 3 * self._min_price_decrease_percentage

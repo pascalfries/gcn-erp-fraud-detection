@@ -3,6 +3,7 @@ from graph.Node import Node
 import random
 import pandas as pd
 import pickle
+import math
 import stellargraph as sg
 
 
@@ -139,7 +140,7 @@ class Graph:
             # data
             for attribute_name in attributes:
                 if attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
-                    nodes[attribute_name].append(node_properties[attribute_name])
+                    nodes[attribute_name].append(math.log(node_properties[attribute_name]))
                 else:
                     nodes[attribute_name].append(0)
 
