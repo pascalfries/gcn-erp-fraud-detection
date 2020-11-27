@@ -8,11 +8,11 @@ import config as cfg
 
 
 # Configuration
-TEST_SET_SIZE = 1500
+TRAIN_SIZE_RELATIVE = 0.75
 VIEW_GRAPH = False
 
 # Model Setup
-random_forest = ensemble.RandomForestClassifier(n_estimators=10, max_depth=4)
+random_forest = ensemble.RandomForestClassifier(n_estimators=10, max_depth=5)
 
 # Get Data
 database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
@@ -29,11 +29,12 @@ dataset = Bunch(
     target=update_changes_df['is_fraud'].values
 )
 
-data_train = dataset.data[:-TEST_SET_SIZE]
-target_train = dataset.target[:-TEST_SET_SIZE]
+test_set_size = int(len(dataset.data) * TRAIN_SIZE_RELATIVE)
+data_train = dataset.data[:-test_set_size]
+target_train = dataset.target[:-test_set_size]
 
-data_test = dataset.data[-TEST_SET_SIZE:]
-target_test = dataset.target[-TEST_SET_SIZE:]
+data_test = dataset.data[-test_set_size:]
+target_test = dataset.target[-test_set_size:]
 
 print('Size Train:', len(data_train))
 print('Size Test:', len(data_test))

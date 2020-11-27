@@ -69,14 +69,24 @@ if cfg.CONF_RUN_SIMULATION:
     simulation.add_agent(Fraudster(name='Selfish Fraudster 1', fraudster_salesperson_id=6, buyer_customer_id=6, products_to_buy=[
         FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.80, purchase_amount=2, purchase_time=16),
         FraudPurchaseDefinition(product_id=19, new_product_price_percent=0.80, purchase_amount=3, purchase_time=300),
-        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.70, purchase_amount=3, purchase_time=426)
+        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.70, purchase_amount=3, purchase_time=426),
+        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.70, purchase_amount=3, purchase_time=796),
+        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.70, purchase_amount=3, purchase_time=1_067)
     ]))
+
+    simulation.add_agent(
+        Fraudster(name='Selfish Fraudster 1', fraudster_salesperson_id=6, buyer_customer_id=90, products_to_buy=[
+            FraudPurchaseDefinition(product_id=33, new_product_price_percent=0.62, purchase_amount=10, purchase_time=552),
+            FraudPurchaseDefinition(product_id=43, new_product_price_percent=0.81, purchase_amount=5, purchase_time=956),
+            FraudPurchaseDefinition(product_id=24, new_product_price_percent=0.73, purchase_amount=8, purchase_time=1_034)
+        ]))
 
     # Fraudsters with Accomplices
     simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 1', fraudster_salesperson_id=6, buyer_customer_id=89, products_to_buy=[
         FraudPurchaseDefinition(product_id=46, new_product_price_percent=0.90, purchase_amount=1, purchase_time=123),
         FraudPurchaseDefinition(product_id=10, new_product_price_percent=0.75, purchase_amount=2, purchase_time=613),
         FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.70, purchase_amount=2, purchase_time=722),
+        FraudPurchaseDefinition(product_id=83, new_product_price_percent=0.80, purchase_amount=1, purchase_time=994),
     ]))
 
     simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 2', fraudster_salesperson_id=6, buyer_customer_id=64, products_to_buy=[
@@ -117,6 +127,7 @@ if cfg.CONF_GENERATE_SLICES_AND_GRAPHS:
 
     graph_gen = GraphGenerator()
     graphs = graph_gen.generate_graphs(databases=slices)
+    graphs.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)
     graphs.save(cfg.STORAGE_BASE_PATH_PY_GRAPHS)
 
     with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:

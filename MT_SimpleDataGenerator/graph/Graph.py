@@ -110,7 +110,7 @@ class Graph:
 
     # https://stellargraph.readthedocs.io/en/stable/api.html#stellargraph.StellarGraph
 
-    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool):
+    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool, str):
         # nodes_gt = pd.Series()
         contains_fraud = False
         edges = {
@@ -151,7 +151,50 @@ class Graph:
                 edges['source'].append(node.get_id())
                 edges['target'].append(neighbor.get_id())
 
-        return sg.StellarDiGraph( pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), contains_fraud
+        return sg.StellarDiGraph( pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), contains_fraud, self._name
+
+    def serialize_stellargraph_node_level(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, pd.Series):
+        nodes_gt = pd.Series()
+        edges = {
+            'source': [],
+            'target': []
+        }
+        nodes = {}
+        nodes_index = []
+
+        for attribute_name in attributes:
+            nodes[attribute_name] = []
+
+        for type_name in node_types:
+            nodes[f'type_{type_name}'] = []
+
+        for index, node in enumerate(self._nodes):
+            node_properties = node.get_properties()
+            nodes_index.append(node.get_id())
+
+            # ground truth
+            if 'is_fraud' in node_properties:
+                nodes_gt._set_value(node.get_id(), 'fraud' if node_properties['is_fraud'] else 'no_fraud')
+            else:
+                nodes_gt._set_value(node.get_id(), 'no_fraud')
+
+            # data
+            for attribute_name in attributes:
+                if attribute_name in node_properties and (
+                        isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name],
+                                                                                       float)):
+                    nodes[attribute_name].append(math.log(node_properties[attribute_name]))
+                else:
+                    nodes[attribute_name].append(0)
+
+            for type_name in node_types:
+                nodes[f'type_{type_name}'].append(node.get_type() == type_name)
+
+            for neighbor in node.get_neighbors():
+                edges['source'].append(node.get_id())
+                edges['target'].append(neighbor.get_id())
+
+        return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), nodes_gt, self._name
 
     # def serialize_stellargraph(self, attributes: List[str]) -> (sg.StellarDiGraph, pd.Series):
     def serialize_stellargraph_with_node_types(self, attributes: List[str]) -> (sg.StellarDiGraph, bool):
