@@ -14,7 +14,7 @@ STORAGE_BASE_PATH_PLOTS = STORAGE_ROOT_PATH + r'\Data Thesis Simulated\plots'
 # runtime setup
 CONF_GENERATE_MASTER_DATA = True
 CONF_RUN_SIMULATION = True
-CONF_GENERATE_SLICES_AND_GRAPHS = True
+CONF_GENERATE_SLICES_AND_GRAPHS = False
 
 # initial master data generator setup
 INIT_GEN_CUSTOMER_COUNT = 100

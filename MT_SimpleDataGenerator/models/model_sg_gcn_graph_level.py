@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import config as cfg
 import pandas as pd
 import time
-import random
 
 
 # SEED

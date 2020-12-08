@@ -17,12 +17,19 @@ class Node:
         self._type: str = node_type
         self._node_color: str = node_color
         self._is_found = False
+        self._is_part_of_large_cluster = False
 
     def get_is_found(self) -> bool:
         return self._is_found
 
+    def get_is_part_of_large_cluster(self) -> bool:
+        return self._is_part_of_large_cluster
+
     def set_is_found(self, is_found: bool):
         self._is_found = is_found
+
+    def set_is_part_of_large_cluster(self, is_part_of_large_cluster: bool):
+        self._is_part_of_large_cluster = is_part_of_large_cluster
 
     def get_id(self) -> int:
         return self._id

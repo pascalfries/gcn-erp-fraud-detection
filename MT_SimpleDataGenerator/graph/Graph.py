@@ -2,6 +2,7 @@ from typing import List, Dict
 from graph.Node import Node
 import random
 import pandas as pd
+import numpy as np
 import pickle
 import math
 import stellargraph as sg
@@ -11,6 +12,7 @@ class Graph:
     def __init__(self, name: str):
         self._name: str = name
         self._nodes: List = []
+        self._nodes_by_key: Dict = {}
 
     def get_name(self) -> str:
         return self._name
@@ -18,15 +20,13 @@ class Graph:
     def get_node_by_index(self, index: int) -> Node:
         return self._nodes[index]
 
-    def get_node_by_id(self, id: int) -> Node:
-        for node in self._nodes:
-            if node.get_id() == id:
-                return node
+    # def get_node_by_id(self, id: int) -> Node:
+    #     for node in self._nodes:
+    #         if node.get_id() == id:
+    #             return node
 
     def get_node_by_key(self, key: str) -> Node:
-        for node in self._nodes:
-            if node.get_key() == key:
-                return node
+        return self._nodes_by_key.get(key, None)
 
     def get_random_node(self) -> Node:
         return self._nodes[random.randint(0, len(self._nodes) - 1)]
@@ -34,16 +34,26 @@ class Graph:
     def add_node(self, node_properties: Dict, key: str = None, node_color: str = 'black', node_type: str = '') -> Node:
         node = Node(node_properties, key, node_color=node_color, node_type=node_type)
         self._nodes.append(node)
+        self._nodes_by_key[key] = node
         return node
 
     def remove_node(self, node: Node):
         node.remove_from_neighbors()
+        del self._nodes_by_key[node.get_key()]
         self._nodes.remove(node)
 
     def prune(self, min_cluster_size: int = 3):
         for node in reversed(self._nodes):
-            if self.compute_cluster_size(node) < min_cluster_size:
+            if node.get_is_part_of_large_cluster():
+                continue
+
+            cluster_size, cluster_nodes = self.compute_cluster(node)
+
+            if cluster_size < min_cluster_size:
                 self.remove_node(node)
+            else:
+                for cluster_node in cluster_nodes:
+                    cluster_node.set_is_part_of_large_cluster(True)
 
         return self
 
@@ -51,29 +61,30 @@ class Graph:
         for node in self._nodes:
             node.set_is_found(False)
 
-    def compute_cluster_size(self, starting_node: Node) -> int:
+    def compute_cluster(self, starting_node: Node) -> (int, List[Node]):
         self.reset_found_nodes()
 
-        return self.compute_cluster_size_recursive(starting_node)
+        return self.compute_cluster_recursive(starting_node)
 
-    def compute_cluster_size_recursive(self, root_node: Node) -> int:
+    def compute_cluster_recursive(self, root_node: Node) -> (int, List[Node]):
         if root_node.get_is_found():
-            return 0
+            return 0, []
 
         root_node.set_is_found(True)
         cluster_size_neighbors = 0
+        cluster_nodes = [root_node]
 
         for neighbor in (root_node.get_neighbors() + root_node.get_references()):
-            cluster_size_neighbors += self.compute_cluster_size_recursive(neighbor)
+            size, nodes = self.compute_cluster_recursive(neighbor)
+            cluster_size_neighbors += size
+            cluster_nodes += nodes
 
-        return 1 + cluster_size_neighbors
+        return (1 + cluster_size_neighbors), cluster_nodes
 
     def export_graphviz(self, filename: str, drop_isolated_nodes: bool = True) -> None:
         node_string = ''
         for node in self._nodes:
-            if not drop_isolated_nodes or len(node.get_neighbors()) > 0 or len(node.get_references()) > 0: # todo make pruning a method of the graph and run before classification
-                # todo add to each node: get_subgraph_size(node) -> count dfs connected nodes
-                # todo for this use node.marked property
+            if not drop_isolated_nodes or len(node.get_neighbors()) > 0 or len(node.get_references()) > 0:
                 node_string += node.generate_graphviz()
 
         f = open(filename, 'w')
@@ -176,16 +187,28 @@ class Graph:
             if 'is_fraud' in node_properties:
                 nodes_gt._set_value(node.get_id(), 'fraud' if node_properties['is_fraud'] else 'no_fraud')
             else:
-                nodes_gt._set_value(node.get_id(), 'no_fraud')
+                nodes_gt._set_value(node.get_id(), 'irrelevant')
+                # nodes_gt._set_value(node.get_id(), 'no_fraud')
+            # nodes_gt._set_value(node.get_id(), node.get_type())
 
-            # data
+            # attributes
             for attribute_name in attributes:
-                if attribute_name in node_properties and (
-                        isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name],
-                                                                                       float)):
-                    nodes[attribute_name].append(math.log(node_properties[attribute_name]))
+                if attribute_name in node_properties:
+                    if isinstance(node_properties[attribute_name], bool):
+                        nodes[attribute_name].append(1 if node_properties[attribute_name] else 0)
+                    elif isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float):
+                        if np.isnan(node_properties[attribute_name]):
+                            nodes[attribute_name].append(-1)
+                        else:
+                            # nodes[attribute_name].append(node_properties[attribute_name])
+                            if node_properties[attribute_name] == 0:
+                                nodes[attribute_name].append(node_properties[attribute_name])
+                            else:
+                                nodes[attribute_name].append(math.log(node_properties[attribute_name]))
+                    else:
+                        nodes[attribute_name].append(-1)
                 else:
-                    nodes[attribute_name].append(0)
+                    nodes[attribute_name].append(-1)
 
             for type_name in node_types:
                 nodes[f'type_{type_name}'].append(node.get_type() == type_name)
@@ -196,9 +219,7 @@ class Graph:
 
         return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), nodes_gt, self._name
 
-    # def serialize_stellargraph(self, attributes: List[str]) -> (sg.StellarDiGraph, pd.Series):
     def serialize_stellargraph_with_node_types(self, attributes: List[str]) -> (sg.StellarDiGraph, bool):
-        # nodes_gt = pd.Series()
         contains_fraud = False
         edges = {
             'source': [],
@@ -206,9 +227,6 @@ class Graph:
         }
         nodes = {}
         nodes_index = {}
-
-        # for attribute_name in attributes:
-        #     nodes[attribute_name] = []
 
         for index, node in enumerate(self._nodes):
             node_properties = node.get_properties()
@@ -245,7 +263,6 @@ class Graph:
         for key in nodes:
             sg_nodes[key] = pd.DataFrame(nodes[key], index=nodes_index[key])
 
-        # return sg.StellarDiGraph(sg_nodes, edges=pd.DataFrame(edges)), nodes_gt
         return sg.StellarDiGraph(sg_nodes, edges=pd.DataFrame(edges)), contains_fraud
 
     def __len__(self):
