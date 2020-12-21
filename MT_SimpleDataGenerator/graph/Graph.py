@@ -150,7 +150,9 @@ class Graph:
 
             # data
             for attribute_name in attributes:
-                if attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
+                if attribute_name in node_properties and (isinstance(node_properties[attribute_name], bool)):
+                    nodes[attribute_name].append(node_properties[attribute_name])
+                elif attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
                     nodes[attribute_name].append(math.log(node_properties[attribute_name]))
                 else:
                     nodes[attribute_name].append(0)

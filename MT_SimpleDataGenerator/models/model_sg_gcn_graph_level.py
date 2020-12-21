@@ -23,7 +23,7 @@ import time
 EPOCHS = 10_000
 TRAIN_SIZE_RELATIVE = 0.80
 
-NODE_FEATURES = ['price', 'old_value', 'new_value']
+NODE_FEATURES = ['price', 'old_value', 'new_value', 'is_fraud']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS', 'MST_ADDRESSES']
 
 

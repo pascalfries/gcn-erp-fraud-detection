@@ -37,7 +37,7 @@ class GraphGenerator:
                     graph.add_node(properties, f'{table.get_name()}[{index}]', node_type=table.get_name())
 
         time_end = time.perf_counter()
-        print(f"generate nodes took {time_end - time_start:0.4f} seconds")
+        # print(f"generate nodes took {time_end - time_start:0.4f} seconds")
 
         # generate DELETE nodes from MTA_CHANGES
         time_start = time.perf_counter()
@@ -47,7 +47,7 @@ class GraphGenerator:
                 graph.add_node(src_record['old_value'], f'{dst_table_name}[{src_record["record_id"]}]', self._fraud_node_color if src_record['is_fraud'] else self._default_node_color, node_type='MTA_CHANGES')
 
         time_end = time.perf_counter()
-        print(f"delete nodes took {time_end - time_start:0.4f} seconds")
+        # print(f"delete nodes took {time_end - time_start:0.4f} seconds")
 
         # generate links
         time_start = time.perf_counter()
@@ -74,7 +74,7 @@ class GraphGenerator:
                             src_node.add_neighbor(dst_node, foreign_key.get_color())
 
         time_end = time.perf_counter()
-        print(f"generate links took {time_end - time_start:0.4f} seconds")
+        # print(f"generate links took {time_end - time_start:0.4f} seconds")
 
         # generate meta links
         time_start = time.perf_counter()
@@ -86,6 +86,6 @@ class GraphGenerator:
             src_node.add_neighbor(dst_node, self._edge_colors[src_record['change_type']])
 
         time_end = time.perf_counter()
-        print(f"generate meta links took {time_end - time_start:0.4f} seconds")
+        # print(f"generate meta links took {time_end - time_start:0.4f} seconds")
 
         return graph

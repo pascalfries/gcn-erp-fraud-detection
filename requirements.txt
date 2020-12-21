@@ -11,3 +11,4 @@ setuptools~=47.1.0
 stellargraph~=1.2.1
 tensorflow~=2.3.0
 tensorflow-gpu~=2.3.0
+Keras~=2.4.3

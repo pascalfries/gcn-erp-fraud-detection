@@ -1,5 +1,10 @@
+from keras.utils.test_utils import get_test_data
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Activation, GRU
+from tensorflow.keras.models import Sequential
+from tensorflow.python.keras.utils.np_utils import to_categorical
+
 from graph.GraphGenerator import GraphGenerator
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,23 +13,15 @@ import stellargraph as sg
 import config as cfg
 import time
 import database_config
-from stellargraph.mapper import FullBatchNodeGenerator
-from stellargraph.layer import GCN
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
 from helpers import set_all_seeds
 from sklearn.metrics import confusion_matrix
-from gcn_testing.graph_gen_node_level import generate_graph
 
-# todo extract ONE graph will all times (graph transformer must generate timestamped nodes for price changes)
-# todo https://stellargraph.readthedocs.io/en/stable/demos/node-classification/gcn-node-classification.html
-
+# todo extract all timestamped nodes in order
+# todo https://www.tensorflow.org/guide/keras/rnn
 
 # todo masking for non-existing attributes
-
-
-def leaky_relu(value):
-    return tf.keras.activations.relu(value, alpha=0.01)
 
 
 # CONFIG ===============================================================================================================
@@ -39,6 +36,64 @@ VALIDATION_SIZE_RELATIVE_TRAIN = 0.50
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
+
+
+# GENERATE GRAPH - ALL TIMES ===========================================================================================
+(x, labels), _ = get_test_data(num_train=600, input_shape=(5, 10), classification=True, num_classes=2)
+print('X_train:', labels.shape)
+print('X_test:', labels.shape)
+
+labels = pd.DataFrame(labels)
+
+# DATA OVERVIEW ========================================================================================================
+
+# TRAIN/TEST SPLIT =====================================================================================================
+train_subjects, test_subjects = model_selection.train_test_split(
+    labels, train_size=int(len(labels) * TRAIN_SIZE_RELATIVE), test_size=None, stratify=labels
+)
+
+val_subjects, test_subjects = model_selection.train_test_split(
+    test_subjects, train_size=int(len(test_subjects) * VALIDATION_SIZE_RELATIVE_TRAIN), test_size=None
+)
+
+print('------------------------\nALL:\n', labels.value_counts())
+print('------------------------\nTRAIN:\n', train_subjects.value_counts())
+print('------------------------\nTEST:\n', test_subjects.value_counts())
+print('------------------------\nVALIDATION:\n', val_subjects.value_counts())
+#todo finish/fix train/test/val split
+
+# MAIN CODE ============================================================================================================
+train_subjects = to_categorical(train_subjects)
+test = to_categorical(test_subjects)
+val_subjects = to_categorical(val_subjects)
+
+es_callback = EarlyStopping(monitor="val_acc", patience=5, restore_best_weights=True)
+auc = tf.keras.metrics.AUC()
+
+model = Sequential([
+    GRU(2),
+    # tf.keras.layers.Dropout(0.5),
+    Activation('softmax')
+])
+
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.Adam(lr=0.05, amsgrad=True), metrics=['acc', auc])
+history = model.fit(
+    x=train_subjects,
+    y=test_subjects,
+    epochs=EPOCHS,
+    batch_size=16,
+    validation_data=(X_test, y_test),
+    shuffle=True,
+    callbacks=[es_callback],
+    verbose=2,
+    class_weight={0: 0.90, 1: 0.05}
+)
+
+sg.utils.plot_history(history)
+plt.show()
+
+
+exit()
 
 
 # GENERATE GRAPH - ALL TIMES ===========================================================================================
@@ -60,37 +115,17 @@ print(f"Prunning took {time_end - time_start:0.4f} seconds")
 graph.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\all.txt')
 
 time_start = time.perf_counter()
-NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'is_fraud']
+NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS', 'MST_ADDRESSES']
 node_feature_count = len(NODE_FEATURES) + len(NODE_TYPES)
 graph_stellar, graph_labels, graph_name = graph.serialize_stellargraph_node_level(NODE_FEATURES, NODE_TYPES)
 time_end = time.perf_counter()
 print(f"Serialize StellarGraph took {time_end - time_start:0.4f} seconds")
 
-# dataset = sg.datasets.Cora()
-# graph_stellar, graph_labels = dataset.load()
-
-# DATA OVERVIEW ========================================================================================================
-print(graph_stellar.info())
-
-
-# TRAIN/TEST SPLIT =====================================================================================================
-train_subjects, test_subjects = model_selection.train_test_split(
-    graph_labels, train_size=int(len(graph_labels) * TRAIN_SIZE_RELATIVE), test_size=None, stratify=graph_labels
-)
-
-val_subjects, test_subjects = model_selection.train_test_split(
-    test_subjects, train_size=int(len(test_subjects) * VALIDATION_SIZE_RELATIVE_TRAIN), test_size=None
-)
-
-print('------------------------\nALL:', graph_labels.value_counts().to_frame())
-print('------------------------\nTRAIN:', train_subjects.value_counts().to_frame())
-print('------------------------\nTEST:', test_subjects.value_counts().to_frame())
-print('------------------------\nVALIDATION:', val_subjects.value_counts().to_frame())
 
 
 # MAIN CODE ============================================================================================================
-with tf.device('/CPU:0'):
+if False:
     es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
 
     auc = tf.keras.metrics.AUC()
@@ -108,37 +143,6 @@ with tf.device('/CPU:0'):
     val_gen = generator.flow(val_subjects.index, val_targets)
     all_gen = generator.flow(graph_labels.index, graph_labels)
 
-    gcn = GCN(
-        layer_sizes=[node_feature_count, node_feature_count], activations=['relu', 'relu'], generator=generator,
-    )
-
-    x_inp, x_out = gcn.in_out_tensors()
-    predictions = Dense(units=16)(x_out)
-    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    # predictions = Dense(units=16)(predictions)
-    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    predictions = Dense(units=train_targets.shape[1], activation="softmax")(predictions)
-
-    model = Model(inputs=x_inp, outputs=predictions)
-    model.compile(
-        optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
-        loss=losses.categorical_crossentropy,
-        metrics=['acc', auc]
-    )
-
-    history = model.fit(
-        train_gen,
-        epochs=EPOCHS,
-        validation_data=val_gen,
-        verbose=2,
-        shuffle=False,
-        callbacks=[es_callback],
-        # class_weight={0: 0.90, 1: 0.05}#, 2: 0.10}
-    )
-
-    sg.utils.plot_history(history)
-    plt.show()
-
     all_predictions = model.predict(all_gen)
     node_predictions = target_encoding.inverse_transform(all_predictions.squeeze())
     df = pd.DataFrame({"Predicted": node_predictions, "True": graph_labels, "RAW": [str(x) for x in all_predictions.squeeze()]})
@@ -149,6 +153,3 @@ with tf.device('/CPU:0'):
     print(df['is_correct'].value_counts())
 
     print(confusion_matrix(df['True'], df['Predicted']))
-
-    # todo make predictions better, maybe works automatically after bugfix (see top of file)
-    # todo fix graph node extractor

@@ -132,6 +132,8 @@ if cfg.CONF_RUN_SIMULATION:
     simulation.run()
 
     database_config.db.save(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
+else:
+    database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
 
 if cfg.CONF_GENERATE_SLICES_AND_GRAPHS:
     db_slicer = DatabaseSlicer(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
