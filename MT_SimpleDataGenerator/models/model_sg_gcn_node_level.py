@@ -14,31 +14,35 @@ from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
 from helpers import set_all_seeds
 from sklearn.metrics import confusion_matrix
-from gcn_testing.graph_gen_node_level import generate_graph
 
 # todo extract ONE graph will all times (graph transformer must generate timestamped nodes for price changes)
-# todo https://stellargraph.readthedocs.io/en/stable/demos/node-classification/gcn-node-classification.html
+# todo masking for non-existing
 
-
-# todo masking for non-existing attributes
-
-
-def leaky_relu(value):
-    return tf.keras.activations.relu(value, alpha=0.01)
+# todo make predictions better, maybe works automatically after bugfix (see top of file)
+# todo fix graph node extractor
 
 
 # CONFIG ===============================================================================================================
-EPOCHS = 1_000
-TRAIN_SIZE_RELATIVE = 0.5
-VALIDATION_SIZE_RELATIVE_TRAIN = 0.50
+RANDOM_SEED = 123
+
+MAX_EPOCHS = 1_000
+TRAIN_SIZE_RELATIVE = 0.60
+VALIDATION_SIZE_RELATIVE_TEST = 0.50
+
+NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
+NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
+              'MST_ADDRESSES']
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(13)
+# set_all_seeds(RANDOM_SEED)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
+
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DO NOT CHANGE CODE BELOW THIS COMMENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 # GENERATE GRAPH - ALL TIMES ===========================================================================================
@@ -60,28 +64,24 @@ print(f"Prunning took {time_end - time_start:0.4f} seconds")
 graph.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\all.txt')
 
 time_start = time.perf_counter()
-NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'is_fraud']
-NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS', 'MST_ADDRESSES']
 node_feature_count = len(NODE_FEATURES) + len(NODE_TYPES)
 graph_stellar, graph_labels, graph_name = graph.serialize_stellargraph_node_level(NODE_FEATURES, NODE_TYPES)
 time_end = time.perf_counter()
 print(f"Serialize StellarGraph took {time_end - time_start:0.4f} seconds")
 
-# dataset = sg.datasets.Cora()
-# graph_stellar, graph_labels = dataset.load()
-
-# DATA OVERVIEW ========================================================================================================
-print(graph_stellar.info())
-
 
 # TRAIN/TEST SPLIT =====================================================================================================
 train_subjects, test_subjects = model_selection.train_test_split(
-    graph_labels, train_size=int(len(graph_labels) * TRAIN_SIZE_RELATIVE), test_size=None, stratify=graph_labels
+    graph_labels, train_size=int(len(graph_labels) * TRAIN_SIZE_RELATIVE), test_size=None
 )
 
 val_subjects, test_subjects = model_selection.train_test_split(
-    test_subjects, train_size=int(len(test_subjects) * VALIDATION_SIZE_RELATIVE_TRAIN), test_size=None
+    test_subjects, train_size=int(len(test_subjects) * VALIDATION_SIZE_RELATIVE_TEST), test_size=None
 )
+
+
+# DATA OVERVIEW ========================================================================================================
+print(graph_stellar.info())
 
 print('------------------------\nALL:', graph_labels.value_counts().to_frame())
 print('------------------------\nTRAIN:', train_subjects.value_counts().to_frame())
@@ -90,36 +90,32 @@ print('------------------------\nVALIDATION:', val_subjects.value_counts().to_fr
 
 
 # MAIN CODE ============================================================================================================
+target_encoding = preprocessing.LabelBinarizer()
+
+train_targets = target_encoding.fit_transform(train_subjects)
+val_targets = target_encoding.transform(val_subjects)
+test_targets = target_encoding.transform(test_subjects)
+
+generator = FullBatchNodeGenerator(graph_stellar, method="gcn")
+
+train_gen = generator.flow(train_subjects.index, train_targets)
+val_gen = generator.flow(val_subjects.index, val_targets)
+test_gen = generator.flow(test_subjects.index, test_targets)
+all_gen = generator.flow(graph_labels.index, graph_labels)
+
+es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+auc = tf.keras.metrics.AUC()
+
 with tf.device('/CPU:0'):
-    es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
-
-    auc = tf.keras.metrics.AUC()
-
-    target_encoding = preprocessing.LabelBinarizer()
-
-    train_targets = target_encoding.fit_transform(train_subjects)
-    val_targets = target_encoding.transform(val_subjects)
-    test_targets = target_encoding.transform(test_subjects)
-
-    generator = FullBatchNodeGenerator(graph_stellar, method="gcn")
-
-    train_gen = generator.flow(train_subjects.index, train_targets)
-    test_gen = generator.flow(test_subjects.index, test_targets)
-    val_gen = generator.flow(val_subjects.index, val_targets)
-    all_gen = generator.flow(graph_labels.index, graph_labels)
-
     gcn = GCN(
         layer_sizes=[node_feature_count, node_feature_count], activations=['relu', 'relu'], generator=generator,
     )
 
     x_inp, x_out = gcn.in_out_tensors()
-    predictions = Dense(units=16)(x_out)
-    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    # predictions = Dense(units=16)(predictions)
-    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    predictions = Dense(units=train_targets.shape[1], activation="softmax")(predictions)
+    predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
 
     model = Model(inputs=x_inp, outputs=predictions)
+
     model.compile(
         optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
         loss=losses.categorical_crossentropy,
@@ -128,7 +124,7 @@ with tf.device('/CPU:0'):
 
     history = model.fit(
         train_gen,
-        epochs=EPOCHS,
+        epochs=MAX_EPOCHS,
         validation_data=val_gen,
         verbose=2,
         shuffle=False,
@@ -136,19 +132,29 @@ with tf.device('/CPU:0'):
         # class_weight={0: 0.90, 1: 0.05}#, 2: 0.10}
     )
 
+    model.summary()
+
     sg.utils.plot_history(history)
     plt.show()
 
     all_predictions = model.predict(all_gen)
-    node_predictions = target_encoding.inverse_transform(all_predictions.squeeze())
-    df = pd.DataFrame({"Predicted": node_predictions, "True": graph_labels, "RAW": [str(x) for x in all_predictions.squeeze()]})
-    df['is_correct'] = df['Predicted'] == df['True']
-    df_err = df[df['is_correct'] == False]
-    df_err.to_csv(r'C:\Users\Pasi\Desktop\results.csv', sep=';')
-    print(df_err)
-    print(df['is_correct'].value_counts())
+    test_predictions = model.predict(test_gen)
 
-    print(confusion_matrix(df['True'], df['Predicted']))
+    all_node_predictions = target_encoding.inverse_transform(all_predictions.squeeze())
+    test_node_predictions = target_encoding.inverse_transform(test_predictions.squeeze())
 
-    # todo make predictions better, maybe works automatically after bugfix (see top of file)
-    # todo fix graph node extractor
+    all_predictions_df = pd.DataFrame({"Predicted": all_node_predictions, "True": graph_labels, "RAW": [str(x) for x in all_predictions.squeeze()]})
+    all_predictions_df['is_correct'] = all_predictions_df['Predicted'] == all_predictions_df['True']
+    all_predictions_df_err = all_predictions_df[all_predictions_df['is_correct'] == False]
+    all_predictions_df_err.to_csv(r'C:\Users\Pasi\Desktop\results_all.csv', sep=';')
+
+    test_predictions_df = pd.DataFrame({"Predicted": test_node_predictions, "True": target_encoding.inverse_transform(test_targets.squeeze())})
+    test_predictions_df['is_correct'] = test_predictions_df['Predicted'] == test_predictions_df['True']
+    test_predictions_df_err = test_predictions_df[test_predictions_df['is_correct'] == False]
+    test_predictions_df_err.to_csv(r'C:\Users\Pasi\Desktop\results_test.csv', sep=';')
+
+    print('------------------------\nALL:\n',
+          confusion_matrix(all_predictions_df['True'], all_predictions_df['Predicted']))
+    print('------------------------\nTEST:\n',
+          confusion_matrix(test_predictions_df['True'], test_predictions_df['Predicted']))
+

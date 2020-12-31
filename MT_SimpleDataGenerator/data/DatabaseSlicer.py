@@ -53,18 +53,9 @@ class DatabaseSlicer:
                         # invert filter and replace entire data-backing df
                         records_to_keep = table_data[(table_data[column.get_name()] >= start_time) & (table_data[column.get_name()] <= end_time)]
                         table.set_data(records_to_keep)
-
-                        # records_to_remove = table_data[(table_data[column.get_name()] < start_time) | (table_data[column.get_name()] > end_time)]
-                        #
-                        # for index, record in records_to_remove.iterrows():
-                        #     table.remove_record(index)
-
                         break
 
             databases_history.append(new_db)
-
-            # if start_time > 60:
-            #     break
         
         return databases_history
 

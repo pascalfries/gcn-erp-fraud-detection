@@ -20,11 +20,6 @@ class Graph:
     def get_node_by_index(self, index: int) -> Node:
         return self._nodes[index]
 
-    # def get_node_by_id(self, id: int) -> Node:
-    #     for node in self._nodes:
-    #         if node.get_id() == id:
-    #             return node
-
     def get_node_by_key(self, key: str) -> Node:
         return self._nodes_by_key.get(key, None)
 
@@ -119,8 +114,6 @@ class Graph:
 
         return graph_nodes, graph_edges
 
-    # https://stellargraph.readthedocs.io/en/stable/api.html#stellargraph.StellarGraph
-
     def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool, str):
         # nodes_gt = pd.Series()
         contains_fraud = False
@@ -190,8 +183,6 @@ class Graph:
                 nodes_gt._set_value(node.get_id(), 'fraud' if node_properties['is_fraud'] else 'no_fraud')
             else:
                 nodes_gt._set_value(node.get_id(), 'irrelevant')
-                # nodes_gt._set_value(node.get_id(), 'no_fraud')
-            # nodes_gt._set_value(node.get_id(), node.get_type())
 
             # attributes
             for attribute_name in attributes:
@@ -202,7 +193,6 @@ class Graph:
                         if np.isnan(node_properties[attribute_name]):
                             nodes[attribute_name].append(-1)
                         else:
-                            # nodes[attribute_name].append(node_properties[attribute_name])
                             if node_properties[attribute_name] == 0:
                                 nodes[attribute_name].append(node_properties[attribute_name])
                             else:
@@ -221,51 +211,51 @@ class Graph:
 
         return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), nodes_gt, self._name
 
-    def serialize_stellargraph_with_node_types(self, attributes: List[str]) -> (sg.StellarDiGraph, bool):
-        contains_fraud = False
-        edges = {
-            'source': [],
-            'target': []
-        }
-        nodes = {}
-        nodes_index = {}
-
-        for index, node in enumerate(self._nodes):
-            node_properties = node.get_properties()
-
-            # ground truth
-            if 'is_fraud' in node_properties and node_properties['is_fraud']:
-                contains_fraud = True
-            # if 'is_fraud' in node_properties:
-            #     nodes_gt._set_value(node.get_id(), 'fraud' if node['is_fraud'] else 'no_fraud')
-            # else:
-            #     nodes_gt._set_value(node.get_id(), 'no_fraud')
-
-            # data
-            if node.get_type() not in nodes:
-                nodes[node.get_type()] = {}
-                nodes_index[node.get_type()] = []
-
-            nodes_index[node.get_type()].append(node.get_id())
-
-            for attribute_name in attributes:
-                if attribute_name not in nodes[node.get_type()]:
-                    nodes[node.get_type()][attribute_name] = []
-
-                if attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
-                    nodes[node.get_type()][attribute_name].append(node_properties[attribute_name])
-                else:
-                    nodes[node.get_type()][attribute_name].append(0)
-
-            for neighbor in node.get_neighbors():
-                edges['source'].append(node.get_id())
-                edges['target'].append(neighbor.get_id())
-
-        sg_nodes = {}
-        for key in nodes:
-            sg_nodes[key] = pd.DataFrame(nodes[key], index=nodes_index[key])
-
-        return sg.StellarDiGraph(sg_nodes, edges=pd.DataFrame(edges)), contains_fraud
+    # def serialize_stellargraph_with_node_types(self, attributes: List[str]) -> (sg.StellarDiGraph, bool):
+    #     contains_fraud = False
+    #     edges = {
+    #         'source': [],
+    #         'target': []
+    #     }
+    #     nodes = {}
+    #     nodes_index = {}
+    #
+    #     for index, node in enumerate(self._nodes):
+    #         node_properties = node.get_properties()
+    #
+    #         # ground truth
+    #         if 'is_fraud' in node_properties and node_properties['is_fraud']:
+    #             contains_fraud = True
+    #         # if 'is_fraud' in node_properties:
+    #         #     nodes_gt._set_value(node.get_id(), 'fraud' if node['is_fraud'] else 'no_fraud')
+    #         # else:
+    #         #     nodes_gt._set_value(node.get_id(), 'no_fraud')
+    #
+    #         # data
+    #         if node.get_type() not in nodes:
+    #             nodes[node.get_type()] = {}
+    #             nodes_index[node.get_type()] = []
+    #
+    #         nodes_index[node.get_type()].append(node.get_id())
+    #
+    #         for attribute_name in attributes:
+    #             if attribute_name not in nodes[node.get_type()]:
+    #                 nodes[node.get_type()][attribute_name] = []
+    #
+    #             if attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
+    #                 nodes[node.get_type()][attribute_name].append(node_properties[attribute_name])
+    #             else:
+    #                 nodes[node.get_type()][attribute_name].append(0)
+    #
+    #         for neighbor in node.get_neighbors():
+    #             edges['source'].append(node.get_id())
+    #             edges['target'].append(neighbor.get_id())
+    #
+    #     sg_nodes = {}
+    #     for key in nodes:
+    #         sg_nodes[key] = pd.DataFrame(nodes[key], index=nodes_index[key])
+    #
+    #     return sg.StellarDiGraph(sg_nodes, edges=pd.DataFrame(edges)), contains_fraud
 
     def __len__(self):
         return len(self._nodes)
