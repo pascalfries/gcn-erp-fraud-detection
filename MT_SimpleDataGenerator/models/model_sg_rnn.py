@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import keras.backend as K
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 import stellargraph as sg
 import config as cfg
 import database_config
@@ -26,7 +25,7 @@ import os
 # CONFIG ===============================================================================================================
 RANDOM_SEED = 123
 
-MAX_EPOCHS = 1_000
+MAX_EPOCHS =1_000
 TRAIN_SIZE_RELATIVE = 0.70
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
@@ -52,6 +51,8 @@ pd.set_option('display.width', None)
 
 
 # GENERATE TIMESERIES - ALL TIMES ======================================================================================
+item_feature_count = len(ITEM_FEATURES) + len(ITEM_TYPES)
+
 if os.path.isfile(STORAGE_PATH_TIMESERIES + r'\rnn_timeseries.npy') and not FORCE_TIMESERIES_REGENERATION:
     print('LOADING TIMESERIES DATA FROM PATH ' + STORAGE_PATH_TIMESERIES)
     timeseries = np.load(STORAGE_PATH_TIMESERIES + r'\rnn_timeseries.npy')
@@ -64,6 +65,8 @@ else:
     np.save(STORAGE_PATH_TIMESERIES + r'\rnn_timeseries.npy', timeseries)
     np.save(STORAGE_PATH_TIMESERIES + r'\rnn_labels.npy', labels)
 
+timeseries[:, :, len(ITEM_TYPES):item_feature_count] = ((timeseries - np.nanmean(timeseries, axis=(0, 1))) / np.nanstd(timeseries, axis=(0, 1)))[:, :, len(ITEM_TYPES):item_feature_count]
+np.nan_to_num(timeseries, copy=False, nan=-1)
 
 # TRAIN/TEST SPLIT =====================================================================================================
 all_idx = list(range(0, len(labels) - 1))
@@ -93,24 +96,21 @@ print('------------------------\nALL:\n', pd.Series(labels).value_counts())
 print('------------------------\nTRAIN:\n', pd.Series(train_labels).value_counts())
 print('------------------------\nVALIDATION:\n', pd.Series(val_labels).value_counts())
 print('------------------------\nTEST:\n', pd.Series(test_labels).value_counts())
-exit()
 
 # MAIN CODE ============================================================================================================
 train_labels = to_categorical(train_labels)
 val_labels = to_categorical(val_labels)
 test_labels = to_categorical(test_labels)
 
-es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True, verbose=1)
 auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
     model = Sequential([
-        # Masking(mask_value=-1),
-        # tf.keras.layers.Embedding(input_dim=10, output_dim=10),
-        # GRU(timeseries.shape[2], input_shape=timeseries.shape[1:]), # shape = (max_time, feat_count)
+        Masking(mask_value=-1),
         GRU(timeseries.shape[2] * 2, input_shape=timeseries.shape[1:]), # shape = (max_time, feat_count)
-        # Dense(10, activation=activation.relu),
-        # Dropout(0.5),
+        Dense(10, activation=activation.relu),
+        Dropout(0.5),
         Dense(2),
         Softmax()
     ])
@@ -135,10 +135,15 @@ with tf.device('/CPU:0'):
 
     model.summary()
     sg.utils.plot_history(history)
+    plt.vlines(es_callback.stopped_epoch - es_callback.patience,
+               min(history.history['loss'] + history.history['val_loss']),
+               max(history.history['loss'] + history.history['val_loss']),
+               colors='#00c700',
+               linestyles='dashed')
     plt.show()
 
 
-# PREDICT ALL ==========================================================================================================
+# TEST MODEL ===========================================================================================================
     all_predictions = K.argmax(model.predict(timeseries)).numpy().tolist()
     test_predictions = K.argmax(model.predict(test_subjects)).numpy().tolist()
 

@@ -87,6 +87,9 @@ class Database:
 
         return new_db
 
+    def normalize_z_score(self):
+        pass # todo implement
+
     def enable_tracing(self) -> None:
         for table in self._tables.values():
             table.enable_tracing()

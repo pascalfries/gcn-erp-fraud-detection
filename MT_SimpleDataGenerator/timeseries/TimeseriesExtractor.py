@@ -2,7 +2,6 @@ from data.DatabaseSlicer import DatabaseSlicer
 from data.Database import Database
 from typing import List
 
-import math
 import numpy as np
 
 
@@ -39,7 +38,7 @@ class TimeseriesExtractor:
         tbl_meta_changes = db.get_table('MTA_CHANGES').get_data()
 
         series = np.ndarray(shape=(max_slice_length, feature_count))
-        series.fill(-1)
+        series.fill(np.nan)
         label = 0 # no fraud
 
         # generate nodes
@@ -77,7 +76,7 @@ class TimeseriesExtractor:
 
     def get_attribute_normalized(self, record, attribute_name):
         if attribute_name not in record:
-            return -1
+            return np.nan
 
         if isinstance(record[attribute_name], bool):
             return 1 if record[attribute_name] else 0
@@ -86,20 +85,14 @@ class TimeseriesExtractor:
             if np.isnan(record[attribute_name]):
                 return -1
             else:
-                if record[attribute_name] == 0:
-                    return record[attribute_name]
-                else:
-                    return math.log(record[attribute_name])
+                return record[attribute_name]
 
         if isinstance(record[attribute_name], str):
             num = float(record[attribute_name])
 
             if np.isnan(num):
-                return -1
+                return np.nan
             else:
-                if num == 0:
-                    return num
-                else:
-                    return math.log(num)
+                return num
 
-        return -1
+        return np.nan

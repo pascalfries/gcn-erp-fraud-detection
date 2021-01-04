@@ -117,7 +117,7 @@ with tf.device('/CPU:0'):
     model = Model(inputs=x_inp, outputs=predictions)
 
     model.compile(
-        optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
+        optimizer=optimizers.Adam(lr=0.001, amsgrad=True),
         loss=losses.categorical_crossentropy,
         metrics=['acc', auc]
     )
@@ -137,6 +137,8 @@ with tf.device('/CPU:0'):
     sg.utils.plot_history(history)
     plt.show()
 
+
+# TEST MODEL ===========================================================================================================
     all_predictions = model.predict(all_gen)
     test_predictions = model.predict(test_gen)
 
