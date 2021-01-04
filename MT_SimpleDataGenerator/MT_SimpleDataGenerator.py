@@ -1,5 +1,3 @@
-import random
-import database_config
 from generators.ProductGenerator import ProductGenerator
 from generators.CustomersGenerator import CustomersGenerator
 from generators.SalespersonsGenerator import SalespersonsGenerator
@@ -10,8 +8,11 @@ from simulation.agents.SalesPerson import Salesperson
 from fraud.FraudPurchaseDefinition import FraudPurchaseDefinition
 from data.DatabaseSlicer import DatabaseSlicer
 from graph.GraphGenerator import GraphGenerator
-import config as cfg
 
+import random
+import database_config
+import os
+import config as cfg
 
 # ===============================================================
 # ========================= RNG SETUP ===========================
@@ -136,16 +137,22 @@ else:
     database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
 
 if cfg.CONF_GENERATE_SLICES_AND_GRAPHS:
-    db_slicer = DatabaseSlicer(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
-    slices = db_slicer.generate_slices_sliding_window(window_duration=cfg.GRAPH_SLICER_WINDOW_DURATION)
-
     graph_gen = GraphGenerator()
-    graphs = graph_gen.generate_graphs(databases=slices)
-    graphs.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)
-    graphs.save(cfg.STORAGE_BASE_PATH_PY_GRAPHS)
+    db_slicer = DatabaseSlicer(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
 
-    with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\generate_graphs.bat', 'w') as graphviz_script:
-        for index, history_item in enumerate(graphs.get_raw_list()):
-            history_item.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\{history_item.get_name()}.txt')
-            print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg',
-                  file=graphviz_script)
+    for window_duration in cfg.GRAPH_SLICER_WINDOW_DURATIONS:
+        print(f'GENERATING DB FOR WINDOW DURATION = {window_duration}')
+        os.mkdir(rf'{cfg.STORAGE_BASE_PATH_PY_GRAPHS}\window_duration_{window_duration}')
+        os.mkdir(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\window_duration_{window_duration}')
+
+        slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration)
+
+        graphs = graph_gen.generate_graphs(databases=slices)
+        graphs.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)
+        graphs.save(cfg.STORAGE_BASE_PATH_PY_GRAPHS + rf'\window_duration_{window_duration}')
+
+        with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\window_duration_{window_duration}\generate_graphs.bat', 'w') as graphviz_script:
+            for index, history_item in enumerate(graphs.get_raw_list()):
+                history_item.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\window_duration_{window_duration}\{history_item.get_name()}.txt')
+                print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg',
+                      file=graphviz_script)

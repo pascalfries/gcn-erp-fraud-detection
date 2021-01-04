@@ -5,27 +5,23 @@ from tensorflow.python.keras.utils.np_utils import to_categorical
 from timeseries.TimeseriesExtractor import TimeseriesExtractor
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds
+from helpers import set_all_seeds, plot_history
 from sklearn.metrics import confusion_matrix
 
 import tensorflow.keras.activations as activation
 import tensorflow as tf
-import matplotlib.pyplot as plt
 import keras.backend as K
 import pandas as pd
 import numpy as np
-import stellargraph as sg
 import config as cfg
 import database_config
 import os
 
-# todo https://www.tensorflow.org/guide/keras/rnn
+# https://www.tensorflow.org/guide/keras/rnn
 
 
 # CONFIG ===============================================================================================================
-RANDOM_SEED = 123
-
-MAX_EPOCHS =1_000
+MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.70
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
@@ -43,7 +39,7 @@ ITEM_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(RANDOM_SEED)
+# set_all_seeds(cfg.RANDOM_SEED_MODEL)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -134,13 +130,8 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-    sg.utils.plot_history(history)
-    plt.vlines(es_callback.stopped_epoch - es_callback.patience,
-               min(history.history['loss'] + history.history['val_loss']),
-               max(history.history['loss'] + history.history['val_loss']),
-               colors='#00c700',
-               linestyles='dashed')
-    plt.show()
+    plot_history(history, es_callback, f'GRU (Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.png')
 
 
 # TEST MODEL ===========================================================================================================

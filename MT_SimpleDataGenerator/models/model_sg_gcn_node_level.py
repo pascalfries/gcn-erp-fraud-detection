@@ -1,10 +1,8 @@
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense
 from graph.GraphGenerator import GraphGenerator
-import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
-import stellargraph as sg
 import config as cfg
 import time
 import database_config
@@ -12,7 +10,7 @@ from stellargraph.mapper import FullBatchNodeGenerator
 from stellargraph.layer import GCN
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds
+from helpers import set_all_seeds, plot_history
 from sklearn.metrics import confusion_matrix
 
 # todo extract ONE graph will all times (graph transformer must generate timestamped nodes for price changes)
@@ -23,11 +21,11 @@ from sklearn.metrics import confusion_matrix
 
 
 # CONFIG ===============================================================================================================
-RANDOM_SEED = 123
-
 MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.60
 VALIDATION_SIZE_RELATIVE_TEST = 0.50
+
+TIMESERIES_GEN_WINDOW_DURATION = 3
 
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
@@ -35,7 +33,7 @@ NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(RANDOM_SEED)
+# set_all_seeds(cfg.RANDOM_SEED_MODEL)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -103,7 +101,7 @@ val_gen = generator.flow(val_subjects.index, val_targets)
 test_gen = generator.flow(test_subjects.index, test_targets)
 all_gen = generator.flow(graph_labels.index, graph_labels)
 
-es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0001, restore_best_weights=True)
 auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
@@ -112,12 +110,14 @@ with tf.device('/CPU:0'):
     )
 
     x_inp, x_out = gcn.in_out_tensors()
+    # predictions = Dense(units=10)(x_out)
+    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
     predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
 
     model = Model(inputs=x_inp, outputs=predictions)
 
     model.compile(
-        optimizer=optimizers.Adam(lr=0.001, amsgrad=True),
+        optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
         loss=losses.categorical_crossentropy,
         metrics=['acc', auc]
     )
@@ -133,9 +133,8 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-
-    sg.utils.plot_history(history)
-    plt.show()
+    plot_history(history, es_callback, f'GCN (Node Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.png')
 
 
 # TEST MODEL ===========================================================================================================

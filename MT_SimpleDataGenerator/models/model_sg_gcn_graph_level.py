@@ -8,19 +8,18 @@ from tensorflow.keras.layers import Dense
 from sklearn.metrics import confusion_matrix, plot_confusion_matrix
 from tensorflow.keras.optimizers import Adam
 from sklearn import model_selection
-from helpers import set_all_seeds, with_probability
+from helpers import set_all_seeds, with_probability, plot_history
 import tensorflow as tf
-import matplotlib.pyplot as plt
 import config as cfg
-import stellargraph as sg
 import pandas as pd
 
 
 # CONFIG ===============================================================================================================
-RANDOM_SEED = 123
 MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.70
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
+
+TIMESERIES_GEN_WINDOW_DURATION = 3
 
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
@@ -28,7 +27,7 @@ NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(RANDOM_SEED)
+# set_all_seeds(cfg.RANDOM_SEED_MODEL)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -105,12 +104,12 @@ all_generator = PaddedGraphGenerator(graphs=graphs_stellar_all)
 test_generator = PaddedGraphGenerator(graphs=graphs_stellar_test)
 
 train_sequence = train_generator.flow(range(len(train_gt)), targets=train_gt.values, batch_size=10)
-val_sequence = val_generator.flow(range(len(val_gt)), targets=val_gt.values, batch_size=10)
+val_sequence = val_generator.flow(range(len(val_gt)), targets=val_gt.values, batch_size=1)
 all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt.values, batch_size=1)
 test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt.values, batch_size=1)
 
 auc = tf.keras.metrics.AUC()
-es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=1e-5, restore_best_weights=True)
 
 
 with tf.device('/CPU:0'):
@@ -122,15 +121,15 @@ with tf.device('/CPU:0'):
     )
 
     x_inp, x_out = gc_model.in_out_tensors()
-    predictions = Dense(units=32)(x_out)
-    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    predictions = Dense(units=16)(predictions)
-    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    predictions = Dense(units=1, activation="sigmoid")(predictions)
+    # predictions = Dense(units=32)(x_out)
+    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
+    # predictions = Dense(units=16)(x_out)
+    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
+    predictions = Dense(units=1, activation="sigmoid")(x_out)
 
     model = Model(inputs=x_inp, outputs=predictions)
     model.compile(
-        optimizer=Adam(0.001, amsgrad=True),
+        optimizer=Adam(0.05, amsgrad=False),
         loss=binary_crossentropy,
         metrics=[auc, 'acc']
     )
@@ -143,8 +142,8 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    sg.utils.plot_history(history)
-    plt.show()
+    plot_history(history, es_callback, f'GCN (Node Graph, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.png')
 
 # TEST MODEL ===========================================================================================================
     print('ALL:')
