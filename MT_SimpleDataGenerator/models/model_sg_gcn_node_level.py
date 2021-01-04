@@ -101,7 +101,7 @@ val_gen = generator.flow(val_subjects.index, val_targets)
 test_gen = generator.flow(test_subjects.index, test_targets)
 all_gen = generator.flow(graph_labels.index, graph_labels)
 
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0001, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0002, restore_best_weights=True)
 auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
@@ -110,8 +110,6 @@ with tf.device('/CPU:0'):
     )
 
     x_inp, x_out = gcn.in_out_tensors()
-    # predictions = Dense(units=10)(x_out)
-    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
     predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
 
     model = Model(inputs=x_inp, outputs=predictions)
@@ -134,7 +132,7 @@ with tf.device('/CPU:0'):
 
     model.summary()
     plot_history(history, es_callback, f'GCN (Node Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.png')
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
 
 # TEST MODEL ===========================================================================================================

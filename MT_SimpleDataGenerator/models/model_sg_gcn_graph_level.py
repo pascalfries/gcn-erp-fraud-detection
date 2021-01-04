@@ -143,7 +143,7 @@ with tf.device('/CPU:0'):
     )
 
     plot_history(history, es_callback, f'GCN (Node Graph, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.png')
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
 # TEST MODEL ===========================================================================================================
     print('ALL:')

@@ -46,6 +46,6 @@ def plot_history(history, es_callback, title=None, save_path=None):
 
     if save_path is not None:
         plt.draw()
-        plt.savefig(save_path, bbox_inches='tight')
+        plt.savefig(save_path, bbox_inches='tight', format='pdf')
     else:
         plt.show(bbox_inches='tight')

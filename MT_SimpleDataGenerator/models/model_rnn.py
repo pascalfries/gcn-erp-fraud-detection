@@ -131,7 +131,7 @@ with tf.device('/CPU:0'):
 
     model.summary()
     plot_history(history, es_callback, f'GRU (Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.png')
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
 
 # TEST MODEL ===========================================================================================================
