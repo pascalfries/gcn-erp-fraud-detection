@@ -9,6 +9,7 @@ from sklearn.metrics import confusion_matrix, plot_confusion_matrix
 from tensorflow.keras.optimizers import Adam
 from sklearn import model_selection
 from helpers import set_all_seeds, with_probability, plot_history
+
 import tensorflow as tf
 import config as cfg
 import pandas as pd
@@ -109,7 +110,7 @@ all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt.values, bat
 test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt.values, batch_size=1)
 
 auc = tf.keras.metrics.AUC()
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=1e-5, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0001, restore_best_weights=True)
 
 
 with tf.device('/CPU:0'):
@@ -121,15 +122,15 @@ with tf.device('/CPU:0'):
     )
 
     x_inp, x_out = gc_model.in_out_tensors()
-    # predictions = Dense(units=32)(x_out)
-    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    # predictions = Dense(units=16)(x_out)
-    # predictions = tf.keras.activations.relu(predictions, alpha=0.01)
-    predictions = Dense(units=1, activation="sigmoid")(x_out)
+
+    predictions = Dense(units=10)(x_out)
+    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
+    predictions = Dense(units=1, activation="sigmoid")(predictions)
 
     model = Model(inputs=x_inp, outputs=predictions)
+
     model.compile(
-        optimizer=Adam(0.05, amsgrad=False),
+        optimizer=Adam(0.005, amsgrad=True),
         loss=binary_crossentropy,
         metrics=[auc, 'acc']
     )
@@ -142,8 +143,8 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    plot_history(history, es_callback, f'GCN (Node Graph, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+    plot_history(history, es_callback, f'GCN (Graph Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================
     print('ALL:')

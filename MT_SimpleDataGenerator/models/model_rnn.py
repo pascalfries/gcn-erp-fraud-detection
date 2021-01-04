@@ -8,7 +8,6 @@ from sklearn import preprocessing, model_selection
 from helpers import set_all_seeds, plot_history
 from sklearn.metrics import confusion_matrix
 
-import tensorflow.keras.activations as activation
 import tensorflow as tf
 import keras.backend as K
 import pandas as pd
@@ -105,7 +104,7 @@ with tf.device('/CPU:0'):
     model = Sequential([
         Masking(mask_value=-1),
         GRU(timeseries.shape[2] * 2, input_shape=timeseries.shape[1:]), # shape = (max_time, feat_count)
-        Dense(10, activation=activation.relu),
+        Dense(10, activation='relu'),
         Dropout(0.5),
         Dense(2),
         Softmax()
@@ -131,7 +130,7 @@ with tf.device('/CPU:0'):
 
     model.summary()
     plot_history(history, es_callback, f'GRU (Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', 10)
 
 
 # TEST MODEL ===========================================================================================================

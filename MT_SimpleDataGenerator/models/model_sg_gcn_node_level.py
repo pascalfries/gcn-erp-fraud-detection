@@ -1,17 +1,18 @@
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense
 from graph.GraphGenerator import GraphGenerator
+from stellargraph.mapper import FullBatchNodeGenerator
+from stellargraph.layer import GCN
+from tensorflow.keras import layers, optimizers, metrics, Model
+from sklearn import preprocessing, model_selection
+from helpers import set_all_seeds, plot_history
+from sklearn.metrics import confusion_matrix
+
 import pandas as pd
 import tensorflow as tf
 import config as cfg
 import time
 import database_config
-from stellargraph.mapper import FullBatchNodeGenerator
-from stellargraph.layer import GCN
-from tensorflow.keras import layers, optimizers, losses, metrics, Model
-from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds, plot_history
-from sklearn.metrics import confusion_matrix
 
 # todo extract ONE graph will all times (graph transformer must generate timestamped nodes for price changes)
 # todo masking for non-existing
@@ -110,13 +111,14 @@ with tf.device('/CPU:0'):
     )
 
     x_inp, x_out = gcn.in_out_tensors()
+
     predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
 
     model = Model(inputs=x_inp, outputs=predictions)
 
     model.compile(
         optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
-        loss=losses.categorical_crossentropy,
+        loss=tf.losses.categorical_crossentropy,
         metrics=['acc', auc]
     )
 
@@ -132,7 +134,7 @@ with tf.device('/CPU:0'):
 
     model.summary()
     plot_history(history, es_callback, f'GCN (Node Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', 10)
 
 
 # TEST MODEL ===========================================================================================================
