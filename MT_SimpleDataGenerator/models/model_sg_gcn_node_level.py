@@ -26,8 +26,6 @@ MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.60
 VALIDATION_SIZE_RELATIVE_TEST = 0.50
 
-TIMESERIES_GEN_WINDOW_DURATION = 3
-
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
               'MST_ADDRESSES']
@@ -58,7 +56,7 @@ graph._name = 'all'
 time_start = time.perf_counter()
 graph.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)
 time_end = time.perf_counter()
-print(f"Prunning took {time_end - time_start:0.4f} seconds")
+print(f"Pruning took {time_end - time_start:0.4f} seconds")
 
 graph.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\all.txt')
 
@@ -133,8 +131,8 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-    plot_history(history, es_callback, f'GCN (Node Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', 10)
+    plot_history(history, es_callback, f'Node Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense {train_targets.shape[1]}, Softmax)',
+                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node.pdf', 10)
 
 
 # TEST MODEL ===========================================================================================================

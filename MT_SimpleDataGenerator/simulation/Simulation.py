@@ -1,9 +1,10 @@
-import sys
-import random
 from typing import List
 from simulation.ScheduledTasks import ScheduledTask
 from simulation.agents.AgentInterface import AgentInterface
 from data.Database import Database
+
+import sys
+import random
 import config as cfg
 
 

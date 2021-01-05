@@ -20,7 +20,7 @@ MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.70
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
-TIMESERIES_GEN_WINDOW_DURATION = 3
+TIMESERIES_GEN_WINDOW_DURATION = 10
 
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
@@ -39,7 +39,7 @@ pd.set_option('display.width', None)
 
 
 # LOAD DATA ============================================================================================================
-graphs = GraphCollection(directory_name=cfg.STORAGE_BASE_PATH_PY_GRAPHS)
+graphs = GraphCollection(directory_name=rf'{cfg.STORAGE_BASE_PATH_PY_GRAPHS}\window_duration_{TIMESERIES_GEN_WINDOW_DURATION}')
 graphs_gt_stellar = graphs.serialize_stellargraph(NODE_FEATURES, NODE_TYPES)
 
 node_feature_count = len(NODE_FEATURES) + len(NODE_TYPES)
@@ -143,7 +143,7 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    plot_history(history, es_callback, f'GCN (Graph Level, Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+    plot_history(history, es_callback, f'Graph Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense 10, LeakyRelu, Dense 1)\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
                  cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================
