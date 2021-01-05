@@ -32,7 +32,8 @@ NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(cfg.RANDOM_SEED_MODEL)
+set_all_seeds(cfg.RANDOM_SEED_MODEL)
+set_all_seeds(999)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -92,15 +93,16 @@ target_encoding = preprocessing.LabelBinarizer()
 train_targets = target_encoding.fit_transform(train_subjects)
 val_targets = target_encoding.transform(val_subjects)
 test_targets = target_encoding.transform(test_subjects)
+all_targets = target_encoding.transform(graph_labels)
 
 generator = FullBatchNodeGenerator(graph_stellar, method="gcn")
 
 train_gen = generator.flow(train_subjects.index, train_targets)
 val_gen = generator.flow(val_subjects.index, val_targets)
 test_gen = generator.flow(test_subjects.index, test_targets)
-all_gen = generator.flow(graph_labels.index, graph_labels)
+all_gen = generator.flow(graph_labels.index, all_targets)
 
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0002, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, restore_best_weights=True)
 auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
@@ -126,8 +128,7 @@ with tf.device('/CPU:0'):
         validation_data=val_gen,
         verbose=2,
         shuffle=False,
-        callbacks=[es_callback],
-        # class_weight={0: 0.90, 1: 0.05}#, 2: 0.10}
+        callbacks=[es_callback]
     )
 
     model.summary()
@@ -142,7 +143,7 @@ with tf.device('/CPU:0'):
     all_node_predictions = target_encoding.inverse_transform(all_predictions.squeeze())
     test_node_predictions = target_encoding.inverse_transform(test_predictions.squeeze())
 
-    all_predictions_df = pd.DataFrame({"Predicted": all_node_predictions, "True": graph_labels, "RAW": [str(x) for x in all_predictions.squeeze()]})
+    all_predictions_df = pd.DataFrame({"Predicted": all_node_predictions, "True": graph_labels})
     all_predictions_df['is_correct'] = all_predictions_df['Predicted'] == all_predictions_df['True']
     all_predictions_df_err = all_predictions_df[all_predictions_df['is_correct'] == False]
     all_predictions_df_err.to_csv(r'C:\Users\Pasi\Desktop\results_all.csv', sep=';')

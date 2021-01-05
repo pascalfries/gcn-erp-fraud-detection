@@ -110,7 +110,7 @@ all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt.values, bat
 test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt.values, batch_size=1)
 
 auc = tf.keras.metrics.AUC()
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0001, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0002, restore_best_weights=True)
 
 
 with tf.device('/CPU:0'):
@@ -124,7 +124,7 @@ with tf.device('/CPU:0'):
     x_inp, x_out = gc_model.in_out_tensors()
 
     predictions = Dense(units=10)(x_out)
-    predictions = tf.keras.activations.relu(predictions, alpha=0.01)
+    predictions = tf.keras.activations.relu(predictions)
     predictions = Dense(units=1, activation="sigmoid")(predictions)
 
     model = Model(inputs=x_inp, outputs=predictions)
