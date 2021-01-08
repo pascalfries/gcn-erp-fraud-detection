@@ -2,6 +2,7 @@ import sys
 import json
 from typing import Optional, Dict, List
 import pandas as pd
+import numpy as np
 from data.DataColumn import DataColumn
 from data.ForeignKey import ForeignKey
 
@@ -156,11 +157,13 @@ class DataTable:
             )
 
     def normalize_z_score(self):
-        for col in self._data.columns:
-            pass
+        for column_name in self._data.columns:
+            column_data = self._data[column_name]
 
-        # self._data[:, :, len(ITEM_TYPES):item_feature_count] = ((timeseries - np.nanmean(timeseries,axis=(0, 1))) / np.nanstd(timeseries, axis=(0, 1)))[:, :, len(ITEM_TYPES):item_feature_count]
-        # np.nan_to_num(timeseries, copy=False, nan=-1)
+            if not np.issubdtype(column_data, np.number):
+                continue
+
+            self._data [column_name] = ((column_data - np.nanmean(column_data)) / np.nanstd(column_data))
 
     def copy(self):
         table = DataTable(self._name, self._trace_changes, self._is_mapping_table, self._data.copy(deep=True))

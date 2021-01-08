@@ -88,7 +88,7 @@ class Database:
         return new_db
 
     def normalize_z_score(self):
-        for table_name, table in self._tables:
+        for table_name, table in self._tables.items():
             print(f'z-Score table: {table_name}')
             table.normalize_z_score()
 

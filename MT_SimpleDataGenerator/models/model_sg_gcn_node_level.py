@@ -15,7 +15,7 @@ import database_config
 
 
 # CONFIG ===============================================================================================================
-MAX_EPOCHS = 1_0#00
+MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 

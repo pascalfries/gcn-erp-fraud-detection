@@ -15,8 +15,8 @@ STORAGE_BASE_THESIS_IMG = r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20
 
 # runtime setup
 CONF_GENERATE_MASTER_DATA = False
-CONF_RUN_SIMULATION = True
-CONF_GENERATE_SLICES_AND_GRAPHS = False
+CONF_RUN_SIMULATION = False
+CONF_GENERATE_SLICES_AND_GRAPHS = True
 
 # initial master data generator setup
 INIT_GEN_CUSTOMER_COUNT = 150
