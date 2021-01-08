@@ -5,8 +5,7 @@ from stellargraph.mapper import FullBatchNodeGenerator
 from stellargraph.layer import GCN
 from tensorflow.keras import layers, optimizers, metrics, Model
 from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds, plot_history
-from sklearn.metrics import confusion_matrix
+from helpers import set_all_seeds, plot_history, plot_confusion_matrix
 
 import pandas as pd
 import tensorflow as tf
@@ -14,12 +13,9 @@ import config as cfg
 import time
 import database_config
 
-# todo make predictions better, maybe works automatically after bugfix (see top of file)
-# todo fix graph node extractor
-
 
 # CONFIG ===============================================================================================================
-MAX_EPOCHS = 1_000
+MAX_EPOCHS = 1_0#00
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
@@ -117,7 +113,7 @@ with tf.device('/CPU:0'):
     model.compile(
         optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
         loss=tf.losses.categorical_crossentropy,
-        metrics=['acc', auc] #, 'sparse_categorical_accuracy', 'categorical_accuracy'
+        metrics=['acc', auc]
     )
 
     history = model.fit(
@@ -151,8 +147,8 @@ with tf.device('/CPU:0'):
     test_predictions_df_err = test_predictions_df[test_predictions_df['is_correct'] == False]
     test_predictions_df_err.to_csv(r'C:\Users\Pasi\Desktop\results_test.csv', sep=';')
 
-    print('------------------------\nALL:\n',
-          confusion_matrix(all_predictions_df['True'], all_predictions_df['Predicted']))
-    print('------------------------\nTEST:\n',
-          confusion_matrix(test_predictions_df['True'], test_predictions_df['Predicted']))
+    plot_confusion_matrix('Confusion Matrix - All Data', all_node_predictions, graph_labels.tolist(),
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_node.pdf')
+    plot_confusion_matrix('Confusion Matrix - Test Data', test_node_predictions, target_encoding.inverse_transform(test_targets.squeeze()),
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_gcn_node.pdf')
 

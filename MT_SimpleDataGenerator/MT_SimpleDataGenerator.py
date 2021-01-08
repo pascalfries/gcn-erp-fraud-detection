@@ -174,6 +174,8 @@ if cfg.CONF_RUN_SIMULATION:
 
     simulation.run()
 
+    database_config.db.normalize_z_score()
+
     database_config.db.save(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
 else:
     database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)

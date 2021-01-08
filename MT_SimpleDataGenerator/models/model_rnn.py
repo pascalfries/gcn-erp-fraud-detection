@@ -5,8 +5,7 @@ from tensorflow.python.keras.utils.np_utils import to_categorical
 from timeseries.TimeseriesExtractor import TimeseriesExtractor
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds, plot_history
-from sklearn.metrics import confusion_matrix
+from helpers import set_all_seeds, plot_history, plot_confusion_matrix
 
 import tensorflow as tf
 import keras.backend as K
@@ -147,5 +146,7 @@ with tf.device('/CPU:0'):
     test_predictions_df_err = test_predictions_df[test_predictions_df['is_correct'] == False]
     test_predictions_df_err.to_csv(r'C:\Users\Pasi\Desktop\results_test.csv', sep=';')
 
-    print('------------------------\nALL:\n', confusion_matrix(all_predictions_df['True'], all_predictions_df['Predicted']))
-    print('------------------------\nTEST:\n', confusion_matrix(test_predictions_df['True'], test_predictions_df['Predicted']))
+    plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, labels,
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+    plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, labels[test_idx],
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')

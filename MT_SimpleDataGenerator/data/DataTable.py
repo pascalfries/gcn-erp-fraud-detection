@@ -155,6 +155,13 @@ class DataTable:
                 lambda i: None if pd.isna(i) is None else json.loads(str(i).replace('\'', '"')) if str(i).startswith('{') else i, na_action=None
             )
 
+    def normalize_z_score(self):
+        for col in self._data.columns:
+            pass
+
+        # self._data[:, :, len(ITEM_TYPES):item_feature_count] = ((timeseries - np.nanmean(timeseries,axis=(0, 1))) / np.nanstd(timeseries, axis=(0, 1)))[:, :, len(ITEM_TYPES):item_feature_count]
+        # np.nan_to_num(timeseries, copy=False, nan=-1)
+
     def copy(self):
         table = DataTable(self._name, self._trace_changes, self._is_mapping_table, self._data.copy(deep=True))
         table.add_columns(list(self._columns.values()), False)

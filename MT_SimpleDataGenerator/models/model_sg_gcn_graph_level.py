@@ -5,10 +5,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from tensorflow.keras.layers import Dense
-from sklearn.metrics import confusion_matrix, plot_confusion_matrix
 from tensorflow.keras.optimizers import Adam
 from sklearn import model_selection
-from helpers import set_all_seeds, with_probability, plot_history
+from helpers import set_all_seeds, with_probability, plot_history, plot_confusion_matrix
 
 import tensorflow as tf
 import config as cfg
@@ -147,20 +146,22 @@ with tf.device('/CPU:0'):
                  cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================
-    print('ALL:')
+    # all
     all_predictions = [x[0] > 0.5 for x in model.predict(all_sequence).tolist()]
     graph_names = [g[2] for g in graphs_gt_stellar]
 
     df = pd.DataFrame({"Slice": graph_names, "Predicted is Fraud": all_predictions, "True is Fraud": graph_labels_all})
     df.to_csv(cfg.STORAGE_ROOT_PATH + r'\result_train.csv', sep=';')
 
-    print(tf.math.confusion_matrix(labels=graph_labels_all, predictions=all_predictions).numpy())
+    plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, graph_labels_all,
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
-    print('TRAIN:')
+    # test
     test_predictions = [x[0] > 0.5 for x in model.predict(test_sequence).tolist()]
     graph_names = [g[2] for g in test_subjects]
 
-    df = pd.DataFrame({"Slice": graph_names, "Predicted is Fraud": test_predictions, "True is Fraud": graphs_stellar_test})
+    df = pd.DataFrame({"Slice": graph_names, "Predicted is Fraud": test_predictions, "True is Fraud": graph_labels_test})
     df.to_csv(cfg.STORAGE_ROOT_PATH + r'\result_test.csv', sep=';')
 
-    print(tf.math.confusion_matrix(labels=graph_labels_test, predictions=test_predictions).numpy())
+    plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, graph_labels_test,
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')

@@ -1,8 +1,12 @@
+from sklearn.metrics import confusion_matrix
+
 import stellargraph as sg
 import tensorflow as tf
 import numpy as np
 import stellargraph.random as sgrand
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 import random
 import os
 
@@ -71,6 +75,26 @@ def plot_history(history, es_callback, title=None, save_path=None, sma_size=None
         fig.axes[0].set_title(title, fontsize=18)
 
     plt.tight_layout(pad=1.06, h_pad=0)
+
+    if save_path is not None:
+        plt.draw()
+        plt.savefig(save_path, bbox_inches='tight', format='pdf')
+    else:
+        plt.show(bbox_inches='tight')
+
+
+def plot_confusion_matrix(title, predictions, ground_truth, save_path=None):
+    classes = set(ground_truth)
+
+    conf_matrix = confusion_matrix(ground_truth, predictions, labels=list(classes))
+    conf_matrix_df = pd.DataFrame(conf_matrix, index=classes, columns=classes)
+
+    figure = plt.figure(figsize=(8, 8))
+    sns.heatmap(conf_matrix_df, annot=True, cmap='RdYlGn')
+    plt.tight_layout()
+    plt.title(title)
+    plt.ylabel('True is_fraud')
+    plt.xlabel('Predicted is_fraud')
 
     if save_path is not None:
         plt.draw()
