@@ -9,10 +9,14 @@ from fraud.FraudPurchaseDefinition import FraudPurchaseDefinition
 from data.DatabaseSlicer import DatabaseSlicer
 from graph.GraphGenerator import GraphGenerator
 
+import config as cfg
 import random
 import database_config
 import os
-import config as cfg
+import sys
+
+
+sys.setrecursionlimit(10_000)
 
 # ===============================================================
 # ========================= RNG SETUP ===========================
@@ -60,7 +64,7 @@ if cfg.CONF_RUN_SIMULATION:
 
     # generate legitimate large customers
     for i in cfg.SIMULATION_CUSTOMER_IDS_LARGE_BUY:
-        min_amount_per_product = random.randint(1, 11);
+        min_amount_per_product = random.randint(1, 11)
 
         simulation.add_agent(Customer(name=f'Large Customer {i}',
                                       tick_buy_probability=random.randint(50, 450) / 1000,
@@ -70,102 +74,102 @@ if cfg.CONF_RUN_SIMULATION:
                                       customer_id=i,
                                       use_salesperson_id=random.choice([None, None, 0, 3, 5, 6, 8, 14])))
 
-    # simulation.add_agent(Customer(name=f'Large Customer 90', tick_buy_probability=0.31, max_product_count=3, min_amount_per_product=10, max_amount_per_product=20, customer_id=90, use_salesperson_id=8))
-    # simulation.add_agent(Customer(name=f'Large Customer 91', tick_buy_probability=0.13, max_product_count=2, max_amount_per_product=25, customer_id=91))
-    # simulation.add_agent(Customer(name=f'Large Customer 92', tick_buy_probability=0.24, customer_id=92, use_salesperson_id=3))
-    # simulation.add_agent(Customer(name=f'Large Customer 93', tick_buy_probability=0.11, max_amount_per_product=100, customer_id=93))
-    # simulation.add_agent(Customer(name=f'Large Customer 94', tick_buy_probability=0.53, customer_id=94, use_salesperson_id=6))
-    # simulation.add_agent(Customer(name=f'Large Customer 95', tick_buy_probability=0.45, customer_id=95, use_salesperson_id=5))
-    # simulation.add_agent(Customer(name=f'Large Customer 96', tick_buy_probability=0.05, max_product_count=1, min_amount_per_product=10, max_amount_per_product=100, customer_id=96))
-    # simulation.add_agent(Customer(name=f'Large Customer 97', tick_buy_probability=0.48, customer_id=97, use_salesperson_id=0))
-    # simulation.add_agent(Customer(name=f'Large Customer 98', tick_buy_probability=0.34, customer_id=98))
-    # simulation.add_agent(Customer(name=f'Large Customer 99', tick_buy_probability=0.09, max_amount_per_product=20, customer_id=99))
-
     # generate fraud customers
     # Selfish Fraudsters
-    simulation.add_agent(Fraudster(name='Selfish Fraudster 1', fraudster_salesperson_id=6, buyer_customer_id=6, products_to_buy=[
-        FraudPurchaseDefinition(product_id=19, new_product_price_percent=0.80, purchase_amount=3, purchase_time=300),
-        FraudPurchaseDefinition(product_id=107, new_product_price_percent=0.70, purchase_amount=1, purchase_time=426),
-        FraudPurchaseDefinition(product_id=98, new_product_price_percent=0.84, purchase_amount=1, purchase_time=638),
-        FraudPurchaseDefinition(product_id=85, new_product_price_percent=0.70, purchase_amount=3, purchase_time=796),
-        FraudPurchaseDefinition(product_id=4, new_product_price_percent=0.65, purchase_amount=5, purchase_time=1_067)
+    simulation.add_agent(Fraudster(name='SF1', fraudster_salesperson_id=6, buyer_customer_id=6, products_to_buy=[
+        FraudPurchaseDefinition(product_id=19, new_product_price_percent=0.79, purchase_amount=3, purchase_time=300),
+        FraudPurchaseDefinition(product_id=107, new_product_price_percent=0.78, purchase_amount=1, purchase_time=426),
+        FraudPurchaseDefinition(product_id=98, new_product_price_percent=0.83, purchase_amount=1, purchase_time=638),
+        FraudPurchaseDefinition(product_id=185, new_product_price_percent=0.70, purchase_amount=3, purchase_time=796),
+        FraudPurchaseDefinition(product_id=4, new_product_price_percent=0.64, purchase_amount=5, purchase_time=1_067),
+        FraudPurchaseDefinition(product_id=73, new_product_price_percent=0.60, purchase_amount=2, purchase_time=1_234),
+        FraudPurchaseDefinition(product_id=191, new_product_price_percent=0.61, purchase_amount=3, purchase_time=1_630),
     ]))
 
-    simulation.add_agent(Fraudster(name='Selfish Fraudster 2', fraudster_salesperson_id=6, buyer_customer_id=90, products_to_buy=[
-        FraudPurchaseDefinition(product_id=33, new_product_price_percent=0.62, purchase_amount=10, purchase_time=552),
-        FraudPurchaseDefinition(product_id=43, new_product_price_percent=0.81, purchase_amount=5, purchase_time=956),
-        FraudPurchaseDefinition(product_id=24, new_product_price_percent=0.73, purchase_amount=8, purchase_time=1_034)
-    ]))
-
-    simulation.add_agent(Fraudster(name='Selfish Fraudster 3', fraudster_salesperson_id=13, buyer_customer_id=143, products_to_buy=[
-        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.80, purchase_amount=2, purchase_time=16),
+    simulation.add_agent(Fraudster(name='SF2', fraudster_salesperson_id=13, buyer_customer_id=143, products_to_buy=[
+        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.80, purchase_amount=2, purchase_time=816),
         FraudPurchaseDefinition(product_id=158, new_product_price_percent=0.80, purchase_amount=4, purchase_time=978),
         FraudPurchaseDefinition(product_id=97, new_product_price_percent=0.80, purchase_amount=2, purchase_time=1_567),
-        FraudPurchaseDefinition(product_id=109, new_product_price_percent=0.80, purchase_amount=2, purchase_time=1_801)
+        FraudPurchaseDefinition(product_id=199, new_product_price_percent=0.67, purchase_amount=2, purchase_time=1_676),
+        FraudPurchaseDefinition(product_id=109, new_product_price_percent=0.80, purchase_amount=2, purchase_time=1_801),
+        FraudPurchaseDefinition(product_id=153, new_product_price_percent=0.65, purchase_amount=2, purchase_time=1_799),
     ]))
 
     # Fraudsters with Accomplices
-    simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 1', fraudster_salesperson_id=6, buyer_customer_id=89, products_to_buy=[
-        FraudPurchaseDefinition(product_id=146, new_product_price_percent=0.90, purchase_amount=1, purchase_time=123),
+    simulation.add_agent(Fraudster(name='FA1', fraudster_salesperson_id=6, buyer_customer_id=89, products_to_buy=[
+        FraudPurchaseDefinition(product_id=146, new_product_price_percent=0.86, purchase_amount=1, purchase_time=123),
         FraudPurchaseDefinition(product_id=10, new_product_price_percent=0.75, purchase_amount=1, purchase_time=407),
         FraudPurchaseDefinition(product_id=10, new_product_price_percent=0.75, purchase_amount=2, purchase_time=613),
         FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.70, purchase_amount=2, purchase_time=722),
         FraudPurchaseDefinition(product_id=83, new_product_price_percent=0.80, purchase_amount=1, purchase_time=994),
     ]))
 
-    simulation.add_agent(Fraudster(name='Fraudster w/ Accomplice 2', fraudster_salesperson_id=6, buyer_customer_id=64, products_to_buy=[
+    simulation.add_agent(Fraudster(name='FA2', fraudster_salesperson_id=6, buyer_customer_id=64, products_to_buy=[
         FraudPurchaseDefinition(product_id=42, new_product_price_percent=0.80, purchase_amount=1, purchase_time=162),
-        FraudPurchaseDefinition(product_id=134, new_product_price_percent=0.85, purchase_amount=1, purchase_time=466),
+        FraudPurchaseDefinition(product_id=134, new_product_price_percent=0.84, purchase_amount=1, purchase_time=466),
         FraudPurchaseDefinition(product_id=64, new_product_price_percent=0.80, purchase_amount=2, purchase_time=609),
         FraudPurchaseDefinition(product_id=118, new_product_price_percent=0.90, purchase_amount=1, purchase_time=1042),
     ]))
 
+    simulation.add_agent(Fraudster(name='FA3', fraudster_salesperson_id=13, buyer_customer_id=90, products_to_buy=[
+        FraudPurchaseDefinition(product_id=33, new_product_price_percent=0.61, purchase_amount=10, purchase_time=552),
+        FraudPurchaseDefinition(product_id=43, new_product_price_percent=0.78, purchase_amount=5, purchase_time=956),
+        FraudPurchaseDefinition(product_id=24, new_product_price_percent=0.72, purchase_amount=8, purchase_time=1_034)
+    ]))
+
+    simulation.add_agent(Fraudster(name='FA4', fraudster_salesperson_id=11, buyer_customer_id=104, products_to_buy=[
+        FraudPurchaseDefinition(product_id=41, new_product_price_percent=0.85, purchase_amount=2, purchase_time=1_455),
+        FraudPurchaseDefinition(product_id=184, new_product_price_percent=0.76, purchase_amount=2, purchase_time=1_813)
+    ]))
+
     # Patient Fraudsters
-    simulation.add_agent(Fraudster(name='Patient Fraudster 1', fraudster_salesperson_id=4, buyer_customer_id=55, products_to_buy=[
-        FraudPurchaseDefinition(product_id=80, new_product_price_percent=0.90, purchase_amount=2, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=10),
+    simulation.add_agent(Fraudster(name='PF1', fraudster_salesperson_id=4, buyer_customer_id=55, products_to_buy=[
+        FraudPurchaseDefinition(product_id=80, new_product_price_percent=0.80, purchase_amount=2, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=10),
         FraudPurchaseDefinition(product_id=18, new_product_price_percent=0.83, purchase_amount=1, price_buy_to_increment_delay=4, price_decrease_to_buy_delay=1, purchase_time=917),
     ]))
 
-    simulation.add_agent(Fraudster(name='Patient Fraudster 2', fraudster_salesperson_id=4, buyer_customer_id=44, products_to_buy=[
-        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.90, purchase_amount=1, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=237),
-        FraudPurchaseDefinition(product_id=132, new_product_price_percent=0.75, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=3, purchase_time=321),
-        FraudPurchaseDefinition(product_id=86, new_product_price_percent=0.91, purchase_amount=3, price_buy_to_increment_delay=4, price_decrease_to_buy_delay=2, purchase_time=413),
-        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.80, purchase_amount=2, price_buy_to_increment_delay=3, price_decrease_to_buy_delay=3, purchase_time=699),
-        FraudPurchaseDefinition(product_id=135, new_product_price_percent=0.83, purchase_amount=4, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=2, purchase_time=1_397),
+    simulation.add_agent(Fraudster(name='PF2', fraudster_salesperson_id=4, buyer_customer_id=44, products_to_buy=[
+        FraudPurchaseDefinition(product_id=7, new_product_price_percent=0.67, purchase_amount=1, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=1, purchase_time=237),
+        FraudPurchaseDefinition(product_id=132, new_product_price_percent=0.74, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=3, purchase_time=321),
+        FraudPurchaseDefinition(product_id=86, new_product_price_percent=0.90, purchase_amount=3, price_buy_to_increment_delay=4, price_decrease_to_buy_delay=2, purchase_time=413),
+        FraudPurchaseDefinition(product_id=91, new_product_price_percent=0.78, purchase_amount=2, price_buy_to_increment_delay=3, price_decrease_to_buy_delay=3, purchase_time=699),
+        FraudPurchaseDefinition(product_id=135, new_product_price_percent=0.72, purchase_amount=4, price_buy_to_increment_delay=2, price_decrease_to_buy_delay=2, purchase_time=1_397),
     ]))
 
-    simulation.add_agent(Fraudster(name='Patient Fraudster 3', fraudster_salesperson_id=13, buyer_customer_id=44, products_to_buy=[
+    simulation.add_agent(Fraudster(name='PF3', fraudster_salesperson_id=13, buyer_customer_id=44, products_to_buy=[
         FraudPurchaseDefinition(product_id=32, new_product_price_percent=0.75, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=3, purchase_time=321),
         FraudPurchaseDefinition(product_id=171, new_product_price_percent=0.71, purchase_amount=1, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=2, purchase_time=1_047),
         FraudPurchaseDefinition(product_id=168, new_product_price_percent=0.88, purchase_amount=3, price_buy_to_increment_delay=7, price_decrease_to_buy_delay=3, purchase_time=1_479),
         FraudPurchaseDefinition(product_id=34, new_product_price_percent=0.45, purchase_amount=3, price_buy_to_increment_delay=8, price_decrease_to_buy_delay=5, purchase_time=1_560),
+        FraudPurchaseDefinition(product_id=34, new_product_price_percent=0.40, purchase_amount=4, price_buy_to_increment_delay=6, price_decrease_to_buy_delay=2, purchase_time=1_574),
     ]))
 
     # Stealthy Fraudsters
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 1', fraudster_salesperson_id=4, buyer_customer_id=26, products_to_buy=[
+    simulation.add_agent(Fraudster(name='YF1', fraudster_salesperson_id=4, buyer_customer_id=26, products_to_buy=[
         FraudPurchaseDefinition(product_id=67, new_product_price_percent=0.80, purchase_amount=1, price_decrease_increments=8, price_increase_increments=5, purchase_time=100),
-        FraudPurchaseDefinition(product_id=21, new_product_price_percent=0.55, purchase_amount=2, price_decrease_increments=5, price_increase_increments=5, purchase_time=356),
-        FraudPurchaseDefinition(product_id=87, new_product_price_percent=0.75, purchase_amount=1, price_decrease_increments=20, price_decrease_to_buy_delay=30, price_buy_to_increment_delay=10, price_increase_increments=5, purchase_time=103),
+        FraudPurchaseDefinition(product_id=21, new_product_price_percent=0.53, purchase_amount=2, price_decrease_increments=5, price_increase_increments=5, purchase_time=356),
+        FraudPurchaseDefinition(product_id=87, new_product_price_percent=0.72, purchase_amount=1, price_decrease_increments=20, price_decrease_to_buy_delay=30, price_buy_to_increment_delay=10, price_increase_increments=5, purchase_time=103),
     ]))
 
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 2', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
+    simulation.add_agent(Fraudster(name='YF2', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
         FraudPurchaseDefinition(product_id=94, new_product_price_percent=0.90, purchase_amount=40, price_decrease_increments=3, price_increase_increments=3, purchase_time=216),
     ]))
 
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 3', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
-        FraudPurchaseDefinition(product_id=39, new_product_price_percent=0.78, purchase_amount=20, price_decrease_increments=5, price_increase_increments=5, purchase_time=739),
+    simulation.add_agent(Fraudster(name='YF3', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
+        FraudPurchaseDefinition(product_id=49, new_product_price_percent=0.73, purchase_amount=20, price_decrease_increments=5, price_increase_increments=5, purchase_time=739),
     ]))
 
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 4', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
+    simulation.add_agent(Fraudster(name='YF4', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
         FraudPurchaseDefinition(product_id=55, new_product_price_percent=0.80, purchase_amount=25, price_decrease_increments=6, price_increase_increments=6, purchase_time=894),
     ]))
 
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 5', fraudster_salesperson_id=13, buyer_customer_id=94, products_to_buy=[
-        FraudPurchaseDefinition(product_id=55, new_product_price_percent=0.75, purchase_amount=25, price_decrease_increments=5, price_increase_increments=5, purchase_time=1_412),
+    simulation.add_agent(Fraudster(name='YF5', fraudster_salesperson_id=13, buyer_customer_id=94, products_to_buy=[
+        FraudPurchaseDefinition(product_id=55, new_product_price_percent=0.76, purchase_amount=10, price_decrease_increments=5, price_increase_increments=4, purchase_time=1_396),
+        FraudPurchaseDefinition(product_id=55, new_product_price_percent=0.72, purchase_amount=25, price_decrease_increments=5, price_increase_increments=5, purchase_time=1_416),
     ]))
 
-    simulation.add_agent(Fraudster(name='Stealthy Fraudster 6', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
-        FraudPurchaseDefinition(product_id=55, new_product_price_percent=0.72, purchase_amount=20, price_decrease_increments=5, price_increase_increments=6, purchase_time=1_637),
+    simulation.add_agent(Fraudster(name='YF6', fraudster_salesperson_id=6, buyer_customer_id=94, products_to_buy=[
+        FraudPurchaseDefinition(product_id=123, new_product_price_percent=0.61, purchase_amount=20, price_decrease_increments=5, price_increase_increments=6, purchase_time=1_637),
     ]))
 
     simulation.run()

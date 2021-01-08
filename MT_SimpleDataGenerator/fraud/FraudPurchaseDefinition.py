@@ -44,7 +44,7 @@ class FraudPurchaseDefinition:
     def get_product_id(self) -> int:
         return self._product_id
 
-    def schedule_events(self, simulation: Simulation, buyer_customer_id: int, fraudster_salesperson_id: int) -> None:
+    def schedule_events(self, simulation: Simulation, buyer_customer_id: int, fraudster_salesperson_id: int, fraud_id: str) -> None:
         # reduce price
         simulation.add_scheduled_task(task.LambdaTask(
             exec_at=self._purchase_time - self._price_decrease_to_buy_delay - self._price_decrease_increments - 1,
@@ -55,6 +55,7 @@ class FraudPurchaseDefinition:
                 'product_id': self._product_id,
                 'buy_time': self._purchase_time,
                 'fraudster_salesperson_id': fraudster_salesperson_id,
+                'fraud_id': fraud_id
             }
         ))
 
@@ -67,13 +68,14 @@ class FraudPurchaseDefinition:
                     'buyer_customer_id': buyer_customer_id,
                     'fraudster_salesperson_id': fraudster_salesperson_id,
                     'buy_time': self._purchase_time,
+                    'fraud_id': fraud_id
                 }
         ))
 
     def _schedule_fraud_price_changes(self, db: Database, args: Dict) -> bool:
         initial_product_price = db.get_table('MST_PRODUCTS').get_record(args['product_id'])['price']
         current_price = initial_product_price
-        new_price = initial_product_price * self._new_product_price_percent if self._new_product_price_percent is not None else self._new_product_price if self._new_product_price is not None else initial_product_price
+        new_price = int(initial_product_price * self._new_product_price_percent) if self._new_product_price_percent is not None else self._new_product_price if self._new_product_price is not None else initial_product_price
 
         for increment_time_offset in range(self._price_decrease_increments):
             current_time = args['buy_time'] - self._price_decrease_to_buy_delay - self._price_decrease_increments + increment_time_offset
@@ -91,6 +93,7 @@ class FraudPurchaseDefinition:
                 field_name='price',
                 new_value=current_price,
                 is_fraud=True,
+                fraud_id=args['fraud_id'],
                 changed_by=args['fraudster_salesperson_id']
             ))
 
@@ -111,13 +114,14 @@ class FraudPurchaseDefinition:
                 field_name='price',
                 new_value=current_price,
                 is_fraud=True,
+                fraud_id=args['fraud_id'],
                 changed_by=args['fraudster_salesperson_id']
             ))
 
         return True
 
     def _schedule_fraud_purchase(self, db: Database, args: Dict) -> bool:
-        db.get_table('TRC_SALES').insert_record([f'FPurchase of Customer {args["buyer_customer_id"]}', args["buyer_customer_id"], args['fraudster_salesperson_id'], True, args['buy_time']])
-        db.get_table('TRM_SALE_PRODUCTS').insert_record([self._product_id, len(db.get_table('TRC_SALES')) - 1, self._purchase_amount, args['buy_time']], changed_by=args['fraudster_salesperson_id']) #  todo len() does not get ID!
+        db.get_table('TRC_SALES').insert_record([f'FPurchase of Customer {args["buyer_customer_id"]}', args["buyer_customer_id"], args['fraudster_salesperson_id'], True, args['fraud_id'], args['buy_time']])
+        db.get_table('TRM_SALE_PRODUCTS').insert_record([self._product_id, len(db.get_table('TRC_SALES')) - 1, self._purchase_amount, args['buy_time']], changed_by=args['fraudster_salesperson_id'])
 
         return True

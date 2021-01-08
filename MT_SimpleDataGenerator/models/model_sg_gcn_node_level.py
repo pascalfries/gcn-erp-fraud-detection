@@ -14,17 +14,14 @@ import config as cfg
 import time
 import database_config
 
-# todo extract ONE graph will all times (graph transformer must generate timestamped nodes for price changes)
-# todo masking for non-existing
-
 # todo make predictions better, maybe works automatically after bugfix (see top of file)
 # todo fix graph node extractor
 
 
 # CONFIG ===============================================================================================================
 MAX_EPOCHS = 1_000
-TRAIN_SIZE_RELATIVE = 0.60
-VALIDATION_SIZE_RELATIVE_TEST = 0.50
+TRAIN_SIZE_RELATIVE = 0.75
+VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
@@ -32,8 +29,8 @@ NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 
 
 
 # SET SEED =============================================================================================================
-set_all_seeds(cfg.RANDOM_SEED_MODEL)
-set_all_seeds(999)
+# set_all_seeds(cfg.RANDOM_SEED_MODEL)
+set_all_seeds(789)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -102,7 +99,8 @@ val_gen = generator.flow(val_subjects.index, val_targets)
 test_gen = generator.flow(test_subjects.index, test_targets)
 all_gen = generator.flow(graph_labels.index, all_targets)
 
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+# es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, restore_best_weights=True)
 auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
@@ -119,7 +117,7 @@ with tf.device('/CPU:0'):
     model.compile(
         optimizer=optimizers.Adam(lr=0.05, amsgrad=True),
         loss=tf.losses.categorical_crossentropy,
-        metrics=['acc', auc]
+        metrics=['acc', auc] #, 'sparse_categorical_accuracy', 'categorical_accuracy'
     )
 
     history = model.fit(

@@ -14,9 +14,9 @@ STORAGE_BASE_PATH_PLOTS = STORAGE_ROOT_PATH + r'\Data Thesis Simulated\plots'
 STORAGE_BASE_THESIS_IMG = r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20\MT - Master Thesis\Schriftlich\Thesis\img\auto'
 
 # runtime setup
-CONF_GENERATE_MASTER_DATA = True
+CONF_GENERATE_MASTER_DATA = False
 CONF_RUN_SIMULATION = True
-CONF_GENERATE_SLICES_AND_GRAPHS = True
+CONF_GENERATE_SLICES_AND_GRAPHS = False
 
 # initial master data generator setup
 INIT_GEN_CUSTOMER_COUNT = 150

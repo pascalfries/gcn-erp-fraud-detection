@@ -17,7 +17,7 @@ import pandas as pd
 
 # CONFIG ===============================================================================================================
 MAX_EPOCHS = 1_000
-TRAIN_SIZE_RELATIVE = 0.70
+TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
 TIMESERIES_GEN_WINDOW_DURATION = 10
@@ -104,24 +104,24 @@ val_generator = PaddedGraphGenerator(graphs=graphs_stellar_val)
 all_generator = PaddedGraphGenerator(graphs=graphs_stellar_all)
 test_generator = PaddedGraphGenerator(graphs=graphs_stellar_test)
 
-train_sequence = train_generator.flow(range(len(train_gt)), targets=train_gt.values, batch_size=10)
+train_sequence = train_generator.flow(range(len(train_gt)), targets=train_gt.values, batch_size=1)
 val_sequence = val_generator.flow(range(len(val_gt)), targets=val_gt.values, batch_size=1)
 all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt.values, batch_size=1)
 test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt.values, batch_size=1)
 
 auc = tf.keras.metrics.AUC()
-es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.0002, restore_best_weights=True)
+es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, restore_best_weights=True)
 
 
 with tf.device('/CPU:0'):
-    gc_model = GCNSupervisedGraphClassification(
+    gcn = GCNSupervisedGraphClassification(
         layer_sizes=[node_feature_count, node_feature_count],
         activations=['relu', 'relu'],
         generator=train_generator,
         dropout=0.0,
     )
 
-    x_inp, x_out = gc_model.in_out_tensors()
+    x_inp, x_out = gcn.in_out_tensors()
 
     predictions = Dense(units=10)(x_out)
     predictions = tf.keras.activations.relu(predictions)

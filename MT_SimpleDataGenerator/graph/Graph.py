@@ -115,7 +115,6 @@ class Graph:
         return graph_nodes, graph_edges
 
     def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool, str):
-        # nodes_gt = pd.Series()
         contains_fraud = False
         edges = {
             'source': [],
@@ -139,7 +138,7 @@ class Graph:
             # if node.get_type() == 'MARKED':
             #     for neighbor in node.get_neighbors():
             #         if neighbor.get_type() == 'MARKED':
-                        contains_fraud = True
+                contains_fraud = True
 
             # data
             for attribute_name in attributes:
@@ -157,7 +156,7 @@ class Graph:
                 edges['source'].append(node.get_id())
                 edges['target'].append(neighbor.get_id())
 
-        return sg.StellarDiGraph( pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), contains_fraud, self._name
+        return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), contains_fraud, self._name
 
     def serialize_stellargraph_node_level(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, pd.Series):
         nodes_gt = pd.Series()

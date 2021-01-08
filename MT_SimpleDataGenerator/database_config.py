@@ -15,7 +15,7 @@ db.add_table(table_products)
 
 # TABLE: SALES
 table_sales = DataTable('TRC_SALES')
-table_sales.add_columns([DataColumn('id', True), DataColumn('description'), DataColumn('customer_id', is_hidden=True), DataColumn('salesperson_id', is_hidden=True), DataColumn('is_fraud'), DataColumn('timestamp', is_timestamp=True)])
+table_sales.add_columns([DataColumn('id', True), DataColumn('description'), DataColumn('customer_id', is_hidden=True), DataColumn('salesperson_id', is_hidden=True), DataColumn('is_fraud'), DataColumn('fraud_id'), DataColumn('timestamp', is_timestamp=True)])
 db.add_table(table_sales)
 
 # TABLE: SALE_PRODUCTS

@@ -46,13 +46,14 @@ class InsertTask(ScheduledTask):
 
 
 class UpdateTask(ScheduledTask):
-    def __init__(self, exec_at: int, table_name: str, item_id: int, field_name: str, new_value, is_fraud: bool = False, changed_by=0):
+    def __init__(self, exec_at: int, table_name: str, item_id: int, field_name: str, new_value, is_fraud: bool = False, fraud_id: str = '', changed_by=0):
         super().__init__(exec_at, table_name)
 
         self._item_id = item_id
         self._field_name = field_name
         self._new_value = new_value
         self._is_fraud = is_fraud
+        self._fraud_id = fraud_id
         self._changed_by = changed_by
 
     def exec(self, db: Database) -> bool:
@@ -63,6 +64,7 @@ class UpdateTask(ScheduledTask):
                                 col_name=self._field_name,
                                 new_value=self._new_value,
                                 is_fraud=self._is_fraud,
+                                fraud_id = self._fraud_id,
                                 changed_by=self._changed_by)
             return True
         else:
@@ -70,18 +72,19 @@ class UpdateTask(ScheduledTask):
 
 
 class DeleteTask(ScheduledTask):
-    def __init__(self, exec_at: int, table_name: str, item_id: int, is_fraud: bool = False, changed_by=0):
+    def __init__(self, exec_at: int, table_name: str, item_id: int, is_fraud: bool = False, fraud_id: str = '', changed_by=0):
         super().__init__(exec_at, table_name)
 
         self._item_id = item_id
         self._is_fraud = is_fraud
+        self._fraud_id = fraud_id
         self._changed_by = changed_by
 
     def exec(self, db: Database) -> bool:
         table = db.get_table(self._table_name)
 
         if table is not None:
-            table.remove_record(self._item_id, is_fraud=self._is_fraud, changed_by=self._changed_by)
+            table.remove_record(self._item_id, is_fraud=self._is_fraud, fraud_id=self._fraud_id, changed_by=self._changed_by)
             return True
         else:
             return False

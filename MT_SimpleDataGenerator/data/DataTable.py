@@ -76,33 +76,33 @@ class DataTable:
     def link_database(self, db):
         self._parent_db = db
 
-    def insert_record(self, record, is_fraud: bool = False, changed_by=0) -> int:
-        return self.insert_record_with_id(len(self._data), record, is_fraud, changed_by)
+    def insert_record(self, record, is_fraud: bool = False, fraud_id: str = '', changed_by=0) -> int:
+        return self.insert_record_with_id(len(self._data), record, is_fraud, fraud_id, changed_by)
 
-    def insert_record_with_id(self, new_id: int, record, is_fraud: bool = False, changed_by=0) -> int:
+    def insert_record_with_id(self, new_id: int, record, is_fraud: bool = False, fraud_id: str = '', changed_by=0) -> int:
         self._data.loc[new_id] = record
 
         if self._trace_changes and self._enable_tracing:
-            change_record = [f'{self._name}.*', new_id, 'create', None, self._data.loc[new_id].to_dict(), changed_by, self._parent_db.get_simulation_time(), is_fraud]
+            change_record = [f'{self._name}.*', new_id, 'create', None, self._data.loc[new_id].to_dict(), changed_by, self._parent_db.get_simulation_time(), is_fraud, fraud_id]
             self._parent_db.get_changelog().insert_record(change_record)
 
         return new_id
 
-    def insert_records(self, records: list, is_fraud: bool = False, changed_by=0) -> None:
+    def insert_records(self, records: list, is_fraud: bool = False, fraud_id: str = '', changed_by=0) -> None:
         for record in records:
-            self.insert_record(record, is_fraud, changed_by)
+            self.insert_record(record, is_fraud, fraud_id, changed_by)
 
     def truncate(self) -> None:
         self._data = self._data[0:0]
 
-    def remove_record(self, num: int, is_fraud: bool = False, changed_by=0):
+    def remove_record(self, num: int, is_fraud: bool = False, fraud_id: str = '', changed_by=0):
         old_record = self.get_record(num)
 
         if old_record is not None:
             self._data.drop(num, inplace=True)
 
             if self._trace_changes and self._enable_tracing:
-                change_record = [f'{self._name}.*', num, 'delete', old_record.to_dict(), None, changed_by, self._parent_db.get_simulation_time(), is_fraud]
+                change_record = [f'{self._name}.*', num, 'delete', old_record.to_dict(), None, changed_by, self._parent_db.get_simulation_time(), is_fraud, fraud_id]
                 self._parent_db.get_changelog().insert_record(change_record)
 
     def get_record(self, num: int):
@@ -120,7 +120,7 @@ class DataTable:
 
         return self._data.index[self._data[column_name] == search_value].tolist()[0]
 
-    def update_record(self, num: int, col_name: str, new_value, is_fraud: bool = False, changed_by=0):
+    def update_record(self, num: int, col_name: str, new_value, is_fraud: bool = False, fraud_id: str = '', changed_by=0):
         if col_name in self._columns.keys():
             old_record = self.get_record(num)
 
@@ -129,7 +129,7 @@ class DataTable:
                 self._data.loc[num, col_name] = new_value
 
                 if self._trace_changes and self._enable_tracing:
-                    change_record = [f'{self._name}.{col_name}', num, 'update', old_value, new_value, changed_by, self._parent_db.get_simulation_time(), is_fraud]
+                    change_record = [f'{self._name}.{col_name}', num, 'update', old_value, new_value, changed_by, self._parent_db.get_simulation_time(), is_fraud, fraud_id]
 
                     self._parent_db.get_changelog().insert_record(change_record)
         else:

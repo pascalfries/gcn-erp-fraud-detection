@@ -122,7 +122,7 @@ def generate_plot_salesperson_changes_over_time():
         plt.bar(x_times, y_number_of_changes)
         plt.bar(x_times, y_number_of_changes_fraud, bottom=y_number_of_changes)
         plt.draw()
-        plt.savefig(f'{cfg.STORAGE_BASE_PATH_PLOTS}\\changes_per_salesperson\\changes_per_salesperson_{salesperson["name"].lower().replace(" ", "_")}.pdf', format='pdf', bbox_inches='tight')
+        plt.savefig(f'{cfg.STORAGE_BASE_PATH_PLOTS}\\changes_per_salesperson\\changes_per_salesperson_id_{index}.pdf', format='pdf', bbox_inches='tight')
         plt.close()
 
     plt.figure(figsize=(24, 12))
@@ -137,7 +137,7 @@ def generate_plot_salesperson_changes_over_time():
     plt.eventplot(events, orientation='horizontal', lineoffsets=[x + 0.20 for x in range(cfg.INIT_GEN_SALESPERSON_COUNT)], linelengths=0.35, linewidths=0.8)
     plt.eventplot(events_fraud, orientation='horizontal', lineoffsets=[x - 0.20 for x in range(cfg.INIT_GEN_SALESPERSON_COUNT)], linelengths=0.35, linewidths=0.8, colors='orange')
     plt.draw()
-    plt.savefig(f'{cfg.STORAGE_BASE_PATH_PLOTS}\\changes_per_salesperson\\activity_per_salesperson', format='pdf', bbox_inches='tight')
+    plt.savefig(f'{cfg.STORAGE_BASE_PATH_PLOTS}\\changes_per_salesperson\\activity_per_salesperson.pdf', format='pdf', bbox_inches='tight')
     plt.close()
 
 
@@ -222,6 +222,9 @@ def generate_plot_customer_purchases_over_time():
                 for sale_index, sale in purchases.iterrows():
                     purchased_products = sale_products[sale_products['sale_id'] == sale_index]
 
+                    if index % 5 != 0:
+                        break
+
                     for _, sale_product in purchased_products.iterrows():
                         if sale['is_fraud']:
                             number_of_products_fraud += int(sale_product['amount'])
@@ -257,11 +260,11 @@ def generate_plot_customer_purchases_over_time():
     plt.xlabel('Time')
     plt.ylabel('Customer ID')
     plt.title(f'Activity of Customers over Time')
-    plt.yticks(np.arange(0, cfg.INIT_GEN_CUSTOMER_COUNT))
+    plt.yticks(np.arange(0, cfg.INIT_GEN_CUSTOMER_COUNT, 5))
     plt.xticks(np.arange(0, cfg.EVAL_SIMULATION_END_TIME + 1, 30))
     plt.eventplot(events, orientation='horizontal', linelengths=0.9, linewidths=1)
     plt.eventplot(events_fraud, orientation='horizontal', linelengths=0.9, linewidths=2, colors='orange')
-    plt.vlines(cfg.SIMULATION_SPECIAL_EVENT_TIMES, 0, cfg.INIT_GEN_CUSTOMER_COUNT, colors=['r', 'r'], linestyles=['dotted', 'dotted'])
+    plt.vlines([t for t in cfg.SIMULATION_SPECIAL_EVENT_TIMES if t <= cfg.EVAL_SIMULATION_END_TIME], 0, cfg.INIT_GEN_CUSTOMER_COUNT, colors=['r', 'r'], linestyles=['dotted', 'dotted'])
     plt.hlines([x - 0.5 for x in range(10, cfg.INIT_GEN_CUSTOMER_COUNT, 10)], 0, cfg.EVAL_SIMULATION_END_TIME, colors='k')
     # plt.show()
     plt.draw()
@@ -321,6 +324,6 @@ def generate_plot_prices_over_time():
 if __name__ == '__main__':
     # generate_plot_product_changes_over_time()
     # generate_misc_changes_plots()
-    # generate_plot_customer_purchases_over_time()
+    generate_plot_customer_purchases_over_time()
     # generate_plot_salesperson_changes_over_time()
-    generate_plot_prices_over_time()
+    # generate_plot_prices_over_time()

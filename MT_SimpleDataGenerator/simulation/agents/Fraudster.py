@@ -18,7 +18,8 @@ class Fraudster(AgentInterface):
 
     def tick(self, simulation: Simulation) -> None:
         if simulation.get_current_time() == 1:
-            for purchase in self._products_to_buy:
+            for index, purchase in enumerate(self._products_to_buy):
                 purchase.schedule_events(simulation=simulation,
                                          buyer_customer_id=self._buyer_customer_id,
-                                         fraudster_salesperson_id=self._fraudster_salesperson_id)
+                                         fraudster_salesperson_id=self._fraudster_salesperson_id,
+                                         fraud_id=f'{self._name}.{index}')

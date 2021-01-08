@@ -21,7 +21,7 @@ import os
 
 # CONFIG ===============================================================================================================
 MAX_EPOCHS = 1_000
-TRAIN_SIZE_RELATIVE = 0.70
+TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
 TIMESERIES_GEN_WINDOW_DURATION = 3
@@ -129,7 +129,7 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-    plot_history(history, es_callback, f'GRU (Window Duration {TIMESERIES_GEN_WINDOW_DURATION}, Seed {cfg.RANDOM_SEED_MODEL})',
+    plot_history(history, es_callback, f'GRU\nWindow Duration {TIMESERIES_GEN_WINDOW_DURATION}',
                  cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', 10)
 
 
