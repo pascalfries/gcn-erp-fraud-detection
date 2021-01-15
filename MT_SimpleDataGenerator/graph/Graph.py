@@ -17,6 +17,11 @@ class Graph:
     def get_name(self) -> str:
         return self._name
 
+    def get_node_by_id(self, id: int) -> Node:
+        for node in self._nodes:
+            if node.get_id() == id:
+                return node
+
     def get_node_by_index(self, index: int) -> Node:
         return self._nodes[index]
 
@@ -114,7 +119,7 @@ class Graph:
 
         return graph_nodes, graph_edges
 
-    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool, str):
+    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, bool, str, set):
         contains_fraud = False
         edges = {
             'source': [],
@@ -122,6 +127,7 @@ class Graph:
         }
         nodes = {}
         nodes_index = []
+        fraud_ids = set()
 
         for attribute_name in attributes:
             nodes[attribute_name] = []
@@ -135,19 +141,23 @@ class Graph:
 
             # ground truth
             if 'is_fraud' in node_properties and node_properties['is_fraud']:
-            # if node.get_type() == 'MARKED':
-            #     for neighbor in node.get_neighbors():
-            #         if neighbor.get_type() == 'MARKED':
                 contains_fraud = True
+
+                fraud_ids.add(node_properties['fraud_id'])
 
             # data
             for attribute_name in attributes:
-                if attribute_name in node_properties and (isinstance(node_properties[attribute_name], bool)):
-                    nodes[attribute_name].append(node_properties[attribute_name])
-                elif attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
-                    nodes[attribute_name].append(math.log(node_properties[attribute_name]))
+                if attribute_name in node_properties:
+                    if isinstance(node_properties[attribute_name], bool):
+                        nodes[attribute_name].append(1 if node_properties[attribute_name] else 0)
+                    elif isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float):
+                        nodes[attribute_name].append(node_properties[attribute_name])
+                    elif isinstance(node_properties[attribute_name], str) and node_properties[attribute_name].isdigit():
+                        nodes[attribute_name].append(float(node_properties[attribute_name]))
+                    else:
+                        nodes[attribute_name].append(np.nan)
                 else:
-                    nodes[attribute_name].append(0)
+                    nodes[attribute_name].append(np.nan)
 
             for type_name in node_types:
                 nodes[f'type_{type_name}'].append(node.get_type() == type_name)
@@ -156,10 +166,20 @@ class Graph:
                 edges['source'].append(node.get_id())
                 edges['target'].append(neighbor.get_id())
 
-        return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), contains_fraud, self._name
+        nodes_df = pd.DataFrame(nodes, index=nodes_index)
 
-    def serialize_stellargraph_node_level(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, pd.Series):
+        # normalize
+        for attribute_name in attributes:
+            column_data = nodes_df[attribute_name]
+            nodes_df[attribute_name] = ((column_data - np.nanmean(column_data)) / np.nanstd(column_data))
+
+        nodes_df.fillna(-1, inplace=True)
+
+        return sg.StellarDiGraph(nodes_df, edges=pd.DataFrame(edges)), contains_fraud, self._name, fraud_ids
+
+    def serialize_stellargraph_node_level(self, attributes: List[str], node_types: List[str]) -> (sg.StellarDiGraph, pd.Series, pd.Series):
         nodes_gt = pd.Series()
+        nodes_fraud_id = pd.Series()
         edges = {
             'source': [],
             'target': []
@@ -179,9 +199,15 @@ class Graph:
 
             # ground truth
             if 'is_fraud' in node_properties:
-                nodes_gt._set_value(node.get_id(), 'fraud' if node_properties['is_fraud'] else 'no_fraud')
+                if node_properties['is_fraud']:
+                    nodes_gt._set_value(node.get_id(), 'fraud')
+                    nodes_fraud_id._set_value(node.get_id(), node_properties['fraud_id'])
+                else:
+                    nodes_gt._set_value(node.get_id(), 'no_fraud')
+                    nodes_fraud_id._set_value(node.get_id(), None)
             else:
                 nodes_gt._set_value(node.get_id(), 'irrelevant')
+                nodes_fraud_id._set_value(node.get_id(), None)
 
             # attributes
             for attribute_name in attributes:
@@ -189,17 +215,13 @@ class Graph:
                     if isinstance(node_properties[attribute_name], bool):
                         nodes[attribute_name].append(1 if node_properties[attribute_name] else 0)
                     elif isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float):
-                        if np.isnan(node_properties[attribute_name]):
-                            nodes[attribute_name].append(-1)
-                        else:
-                            if node_properties[attribute_name] == 0:
-                                nodes[attribute_name].append(node_properties[attribute_name])
-                            else:
-                                nodes[attribute_name].append(math.log(node_properties[attribute_name]))
+                        nodes[attribute_name].append(node_properties[attribute_name])
+                    elif isinstance(node_properties[attribute_name], str) and node_properties[attribute_name].isdigit():
+                        nodes[attribute_name].append(float(node_properties[attribute_name]))
                     else:
-                        nodes[attribute_name].append(-1)
+                        nodes[attribute_name].append(np.nan)
                 else:
-                    nodes[attribute_name].append(-1)
+                    nodes[attribute_name].append(np.nan)
 
             for type_name in node_types:
                 nodes[f'type_{type_name}'].append(node.get_type() == type_name)
@@ -208,53 +230,16 @@ class Graph:
                 edges['source'].append(node.get_id())
                 edges['target'].append(neighbor.get_id())
 
-        return sg.StellarDiGraph(pd.DataFrame(nodes, index=nodes_index), edges=pd.DataFrame(edges)), nodes_gt, self._name
+        nodes_df = pd.DataFrame(nodes, index=nodes_index)
 
-    # def serialize_stellargraph_with_node_types(self, attributes: List[str]) -> (sg.StellarDiGraph, bool):
-    #     contains_fraud = False
-    #     edges = {
-    #         'source': [],
-    #         'target': []
-    #     }
-    #     nodes = {}
-    #     nodes_index = {}
-    #
-    #     for index, node in enumerate(self._nodes):
-    #         node_properties = node.get_properties()
-    #
-    #         # ground truth
-    #         if 'is_fraud' in node_properties and node_properties['is_fraud']:
-    #             contains_fraud = True
-    #         # if 'is_fraud' in node_properties:
-    #         #     nodes_gt._set_value(node.get_id(), 'fraud' if node['is_fraud'] else 'no_fraud')
-    #         # else:
-    #         #     nodes_gt._set_value(node.get_id(), 'no_fraud')
-    #
-    #         # data
-    #         if node.get_type() not in nodes:
-    #             nodes[node.get_type()] = {}
-    #             nodes_index[node.get_type()] = []
-    #
-    #         nodes_index[node.get_type()].append(node.get_id())
-    #
-    #         for attribute_name in attributes:
-    #             if attribute_name not in nodes[node.get_type()]:
-    #                 nodes[node.get_type()][attribute_name] = []
-    #
-    #             if attribute_name in node_properties and (isinstance(node_properties[attribute_name], int) or isinstance(node_properties[attribute_name], float)):
-    #                 nodes[node.get_type()][attribute_name].append(node_properties[attribute_name])
-    #             else:
-    #                 nodes[node.get_type()][attribute_name].append(0)
-    #
-    #         for neighbor in node.get_neighbors():
-    #             edges['source'].append(node.get_id())
-    #             edges['target'].append(neighbor.get_id())
-    #
-    #     sg_nodes = {}
-    #     for key in nodes:
-    #         sg_nodes[key] = pd.DataFrame(nodes[key], index=nodes_index[key])
-    #
-    #     return sg.StellarDiGraph(sg_nodes, edges=pd.DataFrame(edges)), contains_fraud
+        # normalize
+        for attribute_name in attributes:
+            column_data = nodes_df[attribute_name]
+            nodes_df[attribute_name] = ((column_data - np.nanmean(column_data)) / np.nanstd(column_data))
+
+        nodes_df.fillna(-1, inplace=True) # todo check indexes of df
+
+        return sg.StellarDiGraph(nodes_df, edges=pd.DataFrame(edges)), nodes_gt, self._name, nodes_fraud_id
 
     def __len__(self):
         return len(self._nodes)

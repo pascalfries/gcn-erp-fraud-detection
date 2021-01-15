@@ -2,16 +2,19 @@ from graph.GraphCollection import GraphCollection
 from stellargraph.mapper import FullBatchNodeGenerator, PaddedGraphGenerator
 from stellargraph.layer import GCN, GCNSupervisedGraphClassification
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.losses import binary_crossentropy
+from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from sklearn import model_selection
-from helpers import set_all_seeds, with_probability, plot_history, plot_confusion_matrix
+from helpers import set_all_seeds, with_probability, plot_history, plot_confusion_matrix, aggregate_sets_multi
+from tensorflow.python.keras.utils.np_utils import to_categorical
 
 import tensorflow as tf
+import keras.backend as K
 import config as cfg
 import pandas as pd
+import functools
 
 
 # CONFIG ===============================================================================================================
@@ -21,13 +24,13 @@ VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
 TIMESERIES_GEN_WINDOW_DURATION = 10
 
-NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'record_id']
+NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
               'MST_ADDRESSES']
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(cfg.RANDOM_SEED_MODEL)
+set_all_seeds(cfg.RANDOM_SEED_MODEL)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -61,12 +64,22 @@ graph_labels_val = [item[1] for item in val_subjects]
 
 graphs_stellar_all = [item[0] for item in graphs_gt_stellar]
 graph_labels_all = [item[1] for item in graphs_gt_stellar]
+graph_fraud_id_all = [item[3] for item in graphs_gt_stellar]
 
 graphs_stellar_test = [item[0] for item in test_subjects]
 graph_labels_test = [item[1] for item in test_subjects]
+graph_fraud_id_test = [item[3] for item in test_subjects]
 
 
 # DATA OVERVIEW ========================================================================================================
+print('ALL SET:')
+summary = pd.DataFrame(
+    [(g.number_of_nodes(), g.number_of_edges()) for g in graphs_stellar_all],
+    columns=["nodes", "edges"],
+)
+print(summary.describe().round(1))
+print(pd.DataFrame(graph_labels_all).value_counts().to_frame())
+
 print('TRAIN SET:')
 summary = pd.DataFrame(
     [(g.number_of_nodes(), g.number_of_edges()) for g in graphs_stellar_train],
@@ -93,20 +106,25 @@ print(pd.DataFrame(graph_labels_test).value_counts().to_frame())
 
 
 # MAIN CODE ============================================================================================================
-train_gt = pd.get_dummies(graph_labels_train, drop_first=True)
-val_gt = pd.get_dummies(graph_labels_val, drop_first=True)
-all_gt = pd.get_dummies(graph_labels_all, drop_first=True)
-test_gt = pd.get_dummies(graph_labels_test, drop_first=True)
+# train_gt = pd.get_dummies(graph_labels_train, drop_first=True)
+# val_gt = pd.get_dummies(graph_labels_val, drop_first=True)
+# all_gt = pd.get_dummies(graph_labels_all, drop_first=True)
+# test_gt = pd.get_dummies(graph_labels_test, drop_first=True)
+#
+train_gt = to_categorical(graph_labels_train)
+val_gt = to_categorical(graph_labels_val)
+all_gt = to_categorical(graph_labels_all)
+test_gt = to_categorical(graph_labels_test)
 
 train_generator = PaddedGraphGenerator(graphs=graphs_stellar_train)
 val_generator = PaddedGraphGenerator(graphs=graphs_stellar_val)
 all_generator = PaddedGraphGenerator(graphs=graphs_stellar_all)
 test_generator = PaddedGraphGenerator(graphs=graphs_stellar_test)
 
-train_sequence = train_generator.flow(range(len(train_gt)), targets=train_gt.values, batch_size=1)
-val_sequence = val_generator.flow(range(len(val_gt)), targets=val_gt.values, batch_size=1)
-all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt.values, batch_size=1)
-test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt.values, batch_size=1)
+train_sequence = train_generator.flow(range(len(train_gt)), targets=train_gt, batch_size=1)
+val_sequence = val_generator.flow(range(len(val_gt)), targets=val_gt, batch_size=1)
+all_sequence = all_generator.flow(range(len(all_gt)), targets=all_gt, batch_size=1)
+test_sequence = test_generator.flow(range(len(test_gt)), targets=test_gt, batch_size=1)
 
 auc = tf.keras.metrics.AUC()
 es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, restore_best_weights=True)
@@ -114,7 +132,7 @@ es_callback = EarlyStopping(monitor="val_loss", patience=10, min_delta=0.00001, 
 
 with tf.device('/CPU:0'):
     gcn = GCNSupervisedGraphClassification(
-        layer_sizes=[node_feature_count, node_feature_count],
+        layer_sizes=[2*node_feature_count, 2*node_feature_count],
         activations=['relu', 'relu'],
         generator=train_generator,
         dropout=0.0,
@@ -124,13 +142,13 @@ with tf.device('/CPU:0'):
 
     predictions = Dense(units=10)(x_out)
     predictions = tf.keras.activations.relu(predictions)
-    predictions = Dense(units=1, activation="sigmoid")(predictions)
+    predictions = Dense(units=2, activation="softmax")(predictions)
 
     model = Model(inputs=x_inp, outputs=predictions)
 
     model.compile(
         optimizer=Adam(0.005, amsgrad=True),
-        loss=binary_crossentropy,
+        loss=categorical_crossentropy,
         metrics=[auc, 'acc']
     )
 
@@ -142,26 +160,43 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    plot_history(history, es_callback, f'Graph Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense 10, LeakyRelu, Dense 1)\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
+    plot_history(history, es_callback, f'Graph Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense 10, ReLu, Dense 1)\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
                  cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================
+
+
     # all
-    all_predictions = [x[0] > 0.5 for x in model.predict(all_sequence).tolist()]
+    all_predictions = K.argmax(model.predict(all_sequence)).numpy().tolist()
     graph_names = [g[2] for g in graphs_gt_stellar]
 
-    df = pd.DataFrame({"Slice": graph_names, "Predicted is Fraud": all_predictions, "True is Fraud": graph_labels_all})
-    df.to_csv(cfg.STORAGE_ROOT_PATH + r'\result_train.csv', sep=';')
+    all_predictions_df = pd.DataFrame({"Slice": graph_names,
+                       "Predicted is Fraud": all_predictions,
+                       "True is Fraud": graph_labels_all,
+                       "Fraud IDs": graph_fraud_id_all})
+    all_predictions_df['is_correct'] = all_predictions_df['Predicted is Fraud'] == all_predictions_df['True is Fraud']
+    all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+
+    all_identified_cases = all_predictions_df[all_predictions_df['is_correct'] == True]['Fraud IDs']
 
     plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, graph_labels_all,
                           cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
     # test
-    test_predictions = [x[0] > 0.5 for x in model.predict(test_sequence).tolist()]
+    test_predictions = K.argmax(model.predict(test_sequence)).numpy().tolist()
     graph_names = [g[2] for g in test_subjects]
 
-    df = pd.DataFrame({"Slice": graph_names, "Predicted is Fraud": test_predictions, "True is Fraud": graph_labels_test})
-    df.to_csv(cfg.STORAGE_ROOT_PATH + r'\result_test.csv', sep=';')
+    test_predictions_df = pd.DataFrame({"Slice": graph_names,
+                       "Predicted is Fraud": test_predictions,
+                       "True is Fraud": graph_labels_test,
+                       "Fraud IDs": graph_fraud_id_test})
+    test_predictions_df['is_correct'] = test_predictions_df['Predicted is Fraud'] == test_predictions_df['True is Fraud']
+    test_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+
+    all_identified_cases_test = test_predictions_df[test_predictions_df['is_correct'] == True]['Fraud IDs']
 
     plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, graph_labels_test,
                           cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+
+    print('IDENTIFIED IN ALL: ', functools.reduce(aggregate_sets_multi, all_identified_cases.dropna(), set()))
+    print('IDENTIFIED IN TEST: ', functools.reduce(aggregate_sets_multi, all_identified_cases_test.dropna(), set()))

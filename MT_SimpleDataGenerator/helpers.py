@@ -84,17 +84,24 @@ def plot_history(history, es_callback, title=None, save_path=None, sma_size=None
 
 
 def plot_confusion_matrix(title, predictions, ground_truth, save_path=None):
+    plt.rcParams.update({'font.size': 20})
+
     classes = set(ground_truth)
 
     conf_matrix = confusion_matrix(ground_truth, predictions, labels=list(classes))
     conf_matrix_df = pd.DataFrame(conf_matrix, index=classes, columns=classes)
 
     figure = plt.figure(figsize=(8, 8))
-    sns.heatmap(conf_matrix_df, annot=True, cmap='RdYlGn')
+    sns.heatmap(conf_matrix_df, annot=True, fmt="d", cmap='RdYlGn')
     plt.tight_layout()
     plt.title(title)
-    plt.ylabel('True is_fraud')
-    plt.xlabel('Predicted is_fraud')
+
+    if len(classes) == 2:
+        plt.ylabel('True is_fraud')
+        plt.xlabel('Predicted is_fraud')
+    else:
+        plt.ylabel('True Class')
+        plt.xlabel('Predicted Class')
 
     if save_path is not None:
         plt.draw()
@@ -105,3 +112,13 @@ def plot_confusion_matrix(title, predictions, ground_truth, save_path=None):
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
+
+
+def aggregate_sets(aggr, elem):
+    aggr.add(elem)
+    return aggr
+
+
+def aggregate_sets_multi(aggr, set):
+    aggr.update(set)
+    return aggr

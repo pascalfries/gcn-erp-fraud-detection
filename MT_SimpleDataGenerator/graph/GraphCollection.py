@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple
 from graph.Graph import Graph
+
 import numpy as np
 import pandas as pd
 import pickle
 import os
 import stellargraph as sg
-import config as cfg
 
 
 class GraphCollection:
@@ -45,11 +45,11 @@ class GraphCollection:
             np.savetxt(directory_path + graph.get_name() + '.vertices', nodes, fmt='%s')
             np.savetxt(directory_path + graph.get_name() + '.edges', edges)
 
-    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> List[Tuple[sg.StellarDiGraph, bool, str]]:
+    def serialize_stellargraph(self, attributes: List[str], node_types: List[str]) -> List[Tuple[sg.StellarDiGraph, bool, str, set]]:
         return list(map(lambda graph: graph.serialize_stellargraph(attributes, node_types), self._graphs))
 
     def serialize_stellargraph_node_level(self, attributes: List[str], node_types: List[str]) -> List[Tuple[sg.StellarDiGraph, pd.Series, str]]:
-        return list(map(lambda graph: graph.serialize_stellargraph_node_level(attributes, node_types), self._graphs[50:60]))
+        return list(map(lambda graph: graph.serialize_stellargraph_node_level(attributes, node_types), self._graphs))
 
     def __len__(self) -> int:
         return len(self._graphs)

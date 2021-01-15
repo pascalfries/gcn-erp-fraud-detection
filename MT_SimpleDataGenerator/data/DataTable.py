@@ -119,7 +119,8 @@ class DataTable:
         if self._columns[column_name].get_is_primary():
             return search_value
 
-        return self._data.index[self._data[column_name] == search_value].tolist()[0]
+        result = self._data.index[self._data[column_name] == search_value].tolist()
+        return result[0] if len(result) > 0 else None
 
     def update_record(self, num: int, col_name: str, new_value, is_fraud: bool = False, fraud_id: str = '', changed_by=0):
         if col_name in self._columns.keys():
@@ -155,15 +156,6 @@ class DataTable:
             self._data['new_value'] = self._data['new_value'].map(
                 lambda i: None if pd.isna(i) is None else json.loads(str(i).replace('\'', '"')) if str(i).startswith('{') else i, na_action=None
             )
-
-    def normalize_z_score(self):
-        for column_name in self._data.columns:
-            column_data = self._data[column_name]
-
-            if not np.issubdtype(column_data, np.number):
-                continue
-
-            self._data [column_name] = ((column_data - np.nanmean(column_data)) / np.nanstd(column_data))
 
     def copy(self):
         table = DataTable(self._name, self._trace_changes, self._is_mapping_table, self._data.copy(deep=True))

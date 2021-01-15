@@ -13,9 +13,9 @@ class Database:
 
         self._meta_table_changes = DataTable('MTA_CHANGES')
         self._meta_table_changes.add_columns(
-            [DataColumn('id', is_primary=True), DataColumn('table_column_ref', is_hidden=True), DataColumn('record_id', is_hidden=True), DataColumn('change_type'),
+            [DataColumn('id', is_primary=True), DataColumn('table_column_ref', is_hidden=True), DataColumn('record_id'), DataColumn('change_type'),
              DataColumn('old_value'), DataColumn('new_value'), DataColumn('salesperson_id', is_hidden=True),
-             DataColumn('timestamp', is_timestamp=True, is_hidden=False), DataColumn('is_fraud'), DataColumn('fraud_id')])
+             DataColumn('timestamp', is_timestamp=True), DataColumn('is_fraud'), DataColumn('fraud_id')])
         self._meta_table_changes.link_database(self)
         self.add_table(self._meta_table_changes)
 
@@ -58,8 +58,6 @@ class Database:
 
             if foreign_key.get_src_column() in src_table.get_columns().keys() and foreign_key.get_dst_column() in dst_table.get_columns().keys():
                 src_table.get_columns()[foreign_key.get_src_column()].add_foreign_key(foreign_key)
-
-                # print(f'Adding FK {foreign_key.get_key_name()} to {foreign_key.get_src_table()}.{foreign_key.get_src_column()} -> {foreign_key.get_dst_table()}.{foreign_key.get_dst_column()}.')
             else:
                 print(
                     f'ERROR: Column {foreign_key.get_src_table()}.{foreign_key.get_src_column()} or column {foreign_key.get_dst_table()}.{foreign_key.get_dst_column()} doesn\'t exist.')
@@ -86,11 +84,6 @@ class Database:
             new_db.add_table(table.copy())
 
         return new_db
-
-    def normalize_z_score(self):
-        for table_name, table in self._tables.items():
-            print(f'z-Score table: {table_name}')
-            table.normalize_z_score()
 
     def enable_tracing(self) -> None:
         for table in self._tables.values():

@@ -191,7 +191,7 @@ if cfg.CONF_GENERATE_SLICES_AND_GRAPHS:
         if not os.path.exists(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\window_duration_{window_duration}'):
             os.mkdir(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\window_duration_{window_duration}')
 
-        slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration, normalize_z_score=False)
+        slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration)
 
         graphs = graph_gen.generate_graphs(databases=slices)
         graphs.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)

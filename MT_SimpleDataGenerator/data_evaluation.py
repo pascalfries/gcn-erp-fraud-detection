@@ -114,9 +114,9 @@ def generate_plot_salesperson_changes_over_time():
         events.append(event_times)
         events_fraud.append(event_times_fraud)
         plt.figure(figsize=(24, 12))
-        plt.xlabel('Time')
-        plt.ylabel('Number of Changes')
-        plt.title(f'Changes of "{salesperson["name"]}" (ID {index}) over Time')
+        plt.xlabel('Time [in days]')
+        plt.ylabel('Number of Price Changes')
+        plt.title(f'Price Changes of "{salesperson["name"]}" (ID {index}) over Time')
         plt.xlim(left=0, right=cfg.EVAL_SIMULATION_END_TIME)
         plt.xticks(np.arange(min(x_times), max(x_times) + 1, 30))
         plt.bar(x_times, y_number_of_changes)
@@ -127,9 +127,9 @@ def generate_plot_salesperson_changes_over_time():
 
     plt.figure(figsize=(24, 12))
     plt.margins(0, 0)
-    plt.xlabel('Time')
+    plt.xlabel('Time [in days]')
     plt.ylabel('Salesperson ID')
-    plt.title(f'Activity of Salespersons over Time')
+    plt.title(f'Price Changes of all Salespersons over Time')
     plt.yticks(np.arange(0, cfg.INIT_GEN_SALESPERSON_COUNT))
     plt.xticks(np.arange(0, cfg.EVAL_SIMULATION_END_TIME + 1, 30))
     plt.hlines(range(cfg.INIT_GEN_SALESPERSON_COUNT), 0, cfg.EVAL_SIMULATION_END_TIME, colors='#c7c7c7', linestyles='dashed')
@@ -182,9 +182,9 @@ def generate_plot_product_changes_over_time():
 
     plt.figure(figsize=(24, 12))
     plt.margins(0, 0)
-    plt.xlabel('Time')
+    plt.xlabel('Time [in days]')
     plt.ylabel('Product ID')
-    plt.title(f'Changes on Products over Time')
+    plt.title(f'Price Changes on Products over Time')
     plt.yticks(np.arange(0, MAX_PROD_COUNT))
     plt.xticks(np.arange(0, MAX_TIME + 1, 30))
     plt.hlines(range(0, MAX_PROD_COUNT, 10), 0, MAX_TIME, colors='#c7c7c7',
@@ -222,9 +222,6 @@ def generate_plot_customer_purchases_over_time():
                 for sale_index, sale in purchases.iterrows():
                     purchased_products = sale_products[sale_products['sale_id'] == sale_index]
 
-                    if index % 5 != 0:
-                        break
-
                     for _, sale_product in purchased_products.iterrows():
                         if sale['is_fraud']:
                             number_of_products_fraud += int(sale_product['amount'])
@@ -243,7 +240,7 @@ def generate_plot_customer_purchases_over_time():
         events.append(customer_events)
         events_fraud.append(customer_events_fraud)
         plt.figure(figsize=(24, 12))
-        plt.xlabel('Time')
+        plt.xlabel('Time [in days]')
         plt.ylabel('Number of Products purchased')
         plt.title(f'Purchases of "{customer["name"]}" (ID {index}) over Time')
         plt.xlim(left=0, right=cfg.EVAL_SIMULATION_END_TIME)
@@ -257,9 +254,9 @@ def generate_plot_customer_purchases_over_time():
 
     plt.figure(figsize=(24, 24))
     plt.margins(0, 0)
-    plt.xlabel('Time')
+    plt.xlabel('Time [in days]')
     plt.ylabel('Customer ID')
-    plt.title(f'Activity of Customers over Time')
+    plt.title(f'Purchase Activity of all Customers over Time')
     plt.yticks(np.arange(0, cfg.INIT_GEN_CUSTOMER_COUNT, 5))
     plt.xticks(np.arange(0, cfg.EVAL_SIMULATION_END_TIME + 1, 30))
     plt.eventplot(events, orientation='horizontal', linelengths=0.9, linewidths=1)
@@ -306,8 +303,8 @@ def generate_plot_prices_over_time():
             y_prices.append(product['price'])
 
         plt.figure(figsize=(24, 12))
-        plt.xlabel('Time')
-        plt.ylabel('Price')
+        plt.xlabel('Time [in days]')
+        plt.ylabel('Price [in $]')
         plt.title(f'Price of "{product["name"]}" over Time')
         plt.xlim(left=0, right=cfg.EVAL_SIMULATION_END_TIME)
         plt.xticks(np.arange(min(x_times), max(x_times) + 1, 30))
@@ -322,8 +319,8 @@ def generate_plot_prices_over_time():
 
 
 if __name__ == '__main__':
-    # generate_plot_product_changes_over_time()
-    # generate_misc_changes_plots()
-    generate_plot_customer_purchases_over_time()
-    # generate_plot_salesperson_changes_over_time()
-    # generate_plot_prices_over_time()
+    generate_plot_product_changes_over_time()
+    generate_misc_changes_plots()
+    # generate_plot_customer_purchases_over_time()
+    generate_plot_salesperson_changes_over_time()
+    generate_plot_prices_over_time()

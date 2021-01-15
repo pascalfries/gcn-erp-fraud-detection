@@ -1,5 +1,32 @@
 import config as cfg
 from graph.GraphCollection import GraphCollection
+from sap.SapExtractor import SapExtractor
+from graph.GraphGenerator import GraphGenerator
+
+sap_extractor = SapExtractor(r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20\MT - Master Thesis\Data\ERPSimPlanspielAlleDaten\V2_mitFraud PJS1920')
+
+db = sap_extractor.extract()
+
+graph_gen = GraphGenerator()
+graph = graph_gen.generate_graph(db)
+
+graph.export_graphviz(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\tmp\sap.txt') # dot -Tsvg sap.txt -o sap.svg
+
+print('done')
+
+
+
+
+
+
+
+
+
+
+
+
+
+exit()
 
 gc = GraphCollection(directory_name=cfg.STORAGE_BASE_PATH_PY_GRAPHS)
 

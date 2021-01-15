@@ -8,7 +8,7 @@ class DatabaseSlicer:
         self._db = db
         self._max_simulation_time = max_simulation_time
 
-    def generate_slices_sliding_window(self, window_duration: int, window_stride: int = 1, normalize_z_score: bool = False) -> List[Database]:
+    def generate_slices_sliding_window(self, window_duration: int, window_stride: int = 1) -> List[Database]:
         databases_history = []
 
         changes_table = self._db.get_table('MTA_CHANGES').get_data()
@@ -55,11 +55,8 @@ class DatabaseSlicer:
                         table.set_data(records_to_keep)
                         break
 
-            if normalize_z_score:
-                new_db.normalize_z_score()
-
             databases_history.append(new_db)
-        
+
         return databases_history
 
     def generate_slices_per_timestamp(self) -> List[Database]: # obsolete

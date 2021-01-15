@@ -11,9 +11,10 @@ class TimeseriesExtractor:
         self._max_simulation_time = max_simulation_time
 
     # labels: 0: no_fraud, 1: fraud
-    def generate_timeseries(self, window_duration, attributes: List[str], types: List[str]) -> (np.ndarray, np.ndarray):
+    def generate_timeseries(self, window_duration, attributes: List[str], types: List[str]) -> (np.ndarray, np.ndarray, List[set]):
         db_slicer = DatabaseSlicer(db=self._db, max_simulation_time=self._max_simulation_time)
         slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration)[1:] # test ignore 1st timestamp
+        fraud_ids = set()
         slices_lengths = [len(db.get_table('MTA_CHANGES').get_data()) for db in slices]
         max_slice_length = max(slices_lengths)
 
@@ -24,22 +25,25 @@ class TimeseriesExtractor:
 
         # [batch]
         labels = np.ndarray(shape=(len(slices),))
+        fraud_ids_all_timeseries = []
 
         for index, db in enumerate(slices):
-            series, label = self.serialize_timeseries(db, 2 * max_slice_length, attributes, types)
+            series, label, fraud_ids = self.serialize_timeseries(db, 2 * max_slice_length, attributes, types)
 
             labels[index] = label
             timeseries[index::] = series
+            fraud_ids_all_timeseries.append(fraud_ids)
 
-        return timeseries, labels
+        return timeseries, labels, fraud_ids_all_timeseries
 
-    def serialize_timeseries(self, db: Database, max_slice_length, attributes: List[str], types: List[str]) -> (np.ndarray, str):
+    def serialize_timeseries(self, db: Database, max_slice_length, attributes: List[str], types: List[str]) -> (np.ndarray, str, set):
         feature_count = len(attributes) + len(types)
         tbl_meta_changes = db.get_table('MTA_CHANGES').get_data()
 
         series = np.ndarray(shape=(max_slice_length, feature_count))
         series.fill(np.nan)
         label = 0 # no fraud
+        fraud_ids = set()
 
         # generate nodes
         row_index = 0
@@ -55,6 +59,7 @@ class TimeseriesExtractor:
 
             if 'is_fraud' in row and row['is_fraud'] == True:
                 label = 1  # fraud
+                fraud_ids.add(row['fraud_id'])
 
             row_index += 1
 
@@ -72,7 +77,7 @@ class TimeseriesExtractor:
 
             row_index += 1
 
-        return series, label
+        return series, label, fraud_ids
 
     def get_attribute_normalized(self, record, attribute_name):
         if attribute_name not in record:
