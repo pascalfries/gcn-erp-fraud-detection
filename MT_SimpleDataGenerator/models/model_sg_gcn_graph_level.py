@@ -22,7 +22,7 @@ MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
-TIMESERIES_GEN_WINDOW_DURATION = 10
+TIMESERIES_GEN_WINDOW_DURATION = 2
 
 NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
@@ -160,7 +160,7 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    plot_history(history, es_callback, f'Graph Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense 10, ReLu, Dense 1)\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
+    plot_history(history, es_callback, f'Graph Level GCN\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
                  cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================

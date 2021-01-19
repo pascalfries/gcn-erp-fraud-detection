@@ -1,4 +1,6 @@
 from data.Database import Database
+from typing import Tuple
+
 import pandas as pd
 import database_config
 
@@ -7,33 +9,54 @@ class SapExtractor:
     def __init__(self, storage_path):
         self._storage_path = storage_path
 
-        self._sap_kna1 = pd.read_excel(self._storage_path + rf'\kna1.xlsx', engine='openpyxl')
-        self._sap_vbak = pd.read_excel(self._storage_path + rf'\vbak.xlsx', engine='openpyxl')
-        self._sap_vbap = pd.read_excel(self._storage_path + rf'\vbap.xlsx', engine='openpyxl')
+        self._sap_kna1 = pd.read_excel(self._storage_path + rf'\KNA1.xlsx', engine='openpyxl')
+        self._sap_vbak = pd.read_excel(self._storage_path + rf'\VBAK.xlsx', engine='openpyxl')
+        self._sap_vbap = pd.read_excel(self._storage_path + rf'\VBAP.xlsx', engine='openpyxl')
+        self._sap_mbew = pd.read_excel(self._storage_path + rf'\MBEW.xlsx', engine='openpyxl')
+        self._sap_a306 = pd.read_excel(self._storage_path + rf'\A306.xlsx', engine='openpyxl')
+        self._sap_cdpos = pd.read_excel(self._storage_path + rf'\CDPOS.xlsx', engine='openpyxl')
+        self._sap_cdhdr = pd.read_excel(self._storage_path + rf'\CDHDR.xlsx', engine='openpyxl')
 
-    def extract(self) -> Database:
+        self._sap_cdpos = self._sap_cdpos[self._sap_cdpos['Tabellenname'] == 'KONPAE']
+        self._sap_cdpos['Objektwert'] = pd.to_numeric(self._sap_cdpos['Objektwert'])
+
+        self._min_time = 999_999_999_999
+        self._max_time = 0
+
+    def extract(self) -> Tuple[Database, int, int]:
         db = database_config.db
         db.disable_tracing()
-        db.set_name('SAP DATA')
+        db.set_name('SAP_DATA')
 
         self.extract_trc_sales(db)
         self.extract_mst_addresses(db)
         self.extract_mst_customers(db)
         self.extract_tmr_sale_products(db)
+        self.extract_mst_products(db)
+        self.extract_mta_changes(db)
 
-        return db
+        return db, int(self._min_time), int(self._max_time)
 
-    def extract_mst_products(self):
-        pass
+    def extract_mst_products(self, db):
+        tbl_products = db.get_table('MST_PRODUCTS')
 
-    def extract_mta_changes(self):
-        pass
+        for index, sap_product in self._sap_mbew.iterrows():
+            tbl_products.insert_record_with_id(sap_product['Material'], [sap_product['Material'], sap_product['Standardpreis']])
+
+    def extract_mta_changes(self, db):
+        tbl_changes = db.get_table('MTA_CHANGES')
+
+        sap_cdpos_a306 = self._sap_cdpos.merge(self._sap_a306, left_on='Objektwert', right_on='KNUMH')\
+            .merge(self._sap_cdhdr, on='Belegnummer')
+
+        for index, sap_change in sap_cdpos_a306.iterrows():
+            tbl_changes.insert_record_with_id(index, ['MST_PRODUCTS.price', sap_change['MATNR'], 'update', sap_change['alter Wert'], sap_change['neuer Wert'], sap_change['Benutzer'], self.get_precise_datestamp(sap_change['Datum'], sap_change['Uhrzeit']), False, ''])
 
     def extract_tmr_sale_products(self, db: Database):
         tbl_sale_products = db.get_table('TRM_SALE_PRODUCTS')
 
         for index, sap_purchase in self._sap_vbap.iterrows():
-            tbl_sale_products.insert_record([sap_purchase['Material'], sap_purchase['Verkaufsbeleg'], sap_purchase['Auftragsmenge'], sap_purchase['Angelegt am'].timestamp()])
+            tbl_sale_products.insert_record([sap_purchase['Material'], sap_purchase['Verkaufsbeleg'], sap_purchase['Auftragsmenge'], self.get_precise_datestamp(sap_purchase['Angelegt am'], sap_purchase['Uhrzeit'])])
 
     def extract_trc_sales(self, db: Database):
         tbl_sales = db.get_table('TRC_SALES')
@@ -45,7 +68,7 @@ class SapExtractor:
             if salesperson_id is None:
                 salesperson_id = tbl_salespersons.insert_record_with_id(sap_sale['Angelegt von'], [sap_sale['Angelegt von'], sap_sale['Angelegt von']])
 
-            tbl_sales.insert_record_with_id(sap_sale['Verkaufsbeleg'], ['', sap_sale['Auftraggeber'], salesperson_id, False, '', sap_sale['Bestelldatum'].timestamp()])
+            tbl_sales.insert_record_with_id(sap_sale['Verkaufsbeleg'], ['', sap_sale['Auftraggeber'], salesperson_id, False, '', self.get_precise_datestamp(sap_sale['Bestelldatum'], sap_sale['Uhrzeit'])])
 
     def extract_mst_customers(self, db: Database):
         tbl_customers = db.get_table('MST_CUSTOMERS')
@@ -58,3 +81,18 @@ class SapExtractor:
 
         for index, sap_address in self._sap_kna1.iterrows():
             tbl_addresses.insert_record_with_id(sap_address['Debitor'], [sap_address['Straße'], 0, sap_address['Ort'], sap_address['Postleitzahl']])
+
+    def get_precise_datestamp(self, date, time=None):
+        time_ms = 0
+        if time is not None:
+            time_ms = sum(factor * int(t) for factor, t in zip([3600, 60, 1], str(time).split(":")))
+
+        time_total = date.timestamp() + time_ms
+
+        if time_total < self._min_time:
+            self._min_time = time_total
+
+        if time_total > self._max_time:
+            self._max_time = time_total
+
+        return time_total

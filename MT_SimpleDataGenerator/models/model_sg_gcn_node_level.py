@@ -8,7 +8,6 @@ from sklearn import preprocessing, model_selection
 from helpers import set_all_seeds, plot_history, plot_confusion_matrix, aggregate_sets
 
 import pandas as pd
-import numpy as np
 import tensorflow as tf
 import config as cfg
 import time
@@ -21,14 +20,13 @@ MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
-NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp', 'is_fraud']
+NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
               'MST_ADDRESSES']
 
 
 # SET SEED =============================================================================================================
-# set_all_seeds(1)
-set_all_seeds(cfg.RANDOM_SEED_MODEL)
+set_all_seeds(321)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -114,12 +112,17 @@ auc = tf.keras.metrics.AUC()
 
 with tf.device('/CPU:0'):
     gcn = GCN(
-        layer_sizes=[2*node_feature_count, 2*node_feature_count], activations=['relu', 'relu'], generator=generator,
+        layer_sizes=[2*node_feature_count, 2*node_feature_count],
+        activations=['relu', 'relu'],
+        generator=generator
     )
 
     x_inp, x_out = gcn.in_out_tensors()
 
-    predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
+    # predictions = Dense(units=train_targets.shape[1], activation="softmax")(x_out)
+    predictions = Dense(units=10)(x_out)
+    predictions = tf.keras.activations.relu(predictions)
+    predictions = Dense(units=train_targets.shape[1], activation="softmax")(predictions)
 
     model = Model(inputs=x_inp, outputs=predictions)
 
@@ -139,8 +142,7 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-    plot_history(history, es_callback, f'Node Level GCN (GCN [{node_feature_count}, {node_feature_count}], Dense {train_targets.shape[1]}, Softmax)',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node.pdf')
+    plot_history(history, es_callback, f'Node Level GCN', cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_node.pdf')
 
 
 # TEST MODEL ===========================================================================================================

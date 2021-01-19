@@ -4,16 +4,17 @@ from data.Database import Database
 
 
 class DatabaseSlicer:
-    def __init__(self, db: Database, max_simulation_time: int):
+    def __init__(self, db: Database, max_simulation_time: int, min_time: int = 1):
         self._db = db
         self._max_simulation_time = max_simulation_time
+        self._min_time = min_time
 
     def generate_slices_sliding_window(self, window_duration: int, window_stride: int = 1) -> List[Database]:
         databases_history = []
 
         changes_table = self._db.get_table('MTA_CHANGES').get_data()
 
-        for start_time in range(1, self._max_simulation_time - window_duration + 2, window_stride):
+        for start_time in range(self._min_time, self._max_simulation_time - window_duration + 2, window_stride):
             end_time = start_time + window_duration - 1
 
             new_db = self._db.copy()
