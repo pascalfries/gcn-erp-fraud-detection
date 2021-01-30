@@ -237,7 +237,7 @@ class Graph:
             column_data = nodes_df[attribute_name]
             nodes_df[attribute_name] = ((column_data - np.nanmean(column_data)) / np.nanstd(column_data))
 
-        nodes_df.fillna(-1, inplace=True) # todo check indexes of df
+        nodes_df.fillna(-1, inplace=True)
 
         return sg.StellarDiGraph(nodes_df, edges=pd.DataFrame(edges)), nodes_gt, self._name, nodes_fraud_id
 

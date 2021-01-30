@@ -11,7 +11,9 @@ STORAGE_BASE_PATH_SIMULATED_DATA = STORAGE_ROOT_PATH + r'\Data Thesis Simulated'
 STORAGE_BASE_PATH_PY_GRAPHS = STORAGE_ROOT_PATH + r'\Data Thesis Simulated\pygraphs'
 STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS = STORAGE_ROOT_PATH + r'\Data Thesis Simulated\graphs'
 STORAGE_BASE_PATH_PLOTS = STORAGE_ROOT_PATH + r'\Data Thesis Simulated\plots'
+STORAGE_BASE_PATH_MODELS = STORAGE_ROOT_PATH + r'\models'
 STORAGE_BASE_THESIS_IMG = r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20\MT - Master Thesis\Schriftlich\Thesis\img\auto'
+STORAGE_BASE_SAP_DATA = r'C:\Users\Pasi\OneDrive\Documents\Uni\MSem. 4 - SS 20\MT - Master Thesis\Data\ERPSimPlanspielAlleDaten\V2_mitFraud PJS1920'
 
 # runtime setup
 CONF_GENERATE_MASTER_DATA = False
@@ -33,6 +35,9 @@ SIMULATION_CUSTOMER_IDS_LARGE_BUY = [31, 37, 64, 76, 90, 94, 116, 134, 138, 143]
 # database slice generation & pruning
 GRAPH_SLICER_WINDOW_DURATIONS = [2, 3, 5, 10]
 GRAPH_PRUNING_MIN_CLUSTER_SIZE = 4
+
+SAP_DATA_WINDOW_DURATION = 180 # 450, 225, sim. size = 180
+SAP_DATA_WINDOW_STRIDE = 90 # 225, 113, sim. size = 90
 
 # evaluation script
 EVAL_SIMULATION_END_TIME = 365 * 2

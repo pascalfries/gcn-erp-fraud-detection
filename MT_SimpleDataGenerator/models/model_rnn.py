@@ -5,7 +5,7 @@ from tensorflow.python.keras.utils.np_utils import to_categorical
 from timeseries.TimeseriesExtractor import TimeseriesExtractor
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
-from helpers import set_all_seeds, plot_history, plot_confusion_matrix, aggregate_sets_multi
+from helpers import set_all_seeds, plot_history, plot_confusion_matrix, aggregate_sets_multi, apply_model_to_sap_data_timeseries
 
 import tensorflow as tf
 import keras.backend as K
@@ -21,11 +21,11 @@ import functools
 
 
 # CONFIG ===============================================================================================================
-MAX_EPOCHS = 1_000
+MAX_EPOCHS = 1#_000
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
-TIMESERIES_GEN_WINDOW_DURATION = 10
+TIMESERIES_GEN_WINDOW_DURATION = 2
 
 FORCE_TIMESERIES_REGENERATION = False
 STORAGE_PATH_TIMESERIES = r'C:\Users\Pasi\Documents (offline)\timeseries'
@@ -59,7 +59,7 @@ if os.path.isfile(STORAGE_PATH_TIMESERIES + rf'\rnn_timeseries_{TIMESERIES_GEN_W
 else:
     database_config.db.load(cfg.STORAGE_BASE_PATH_SIMULATED_DATA)
     timeseries_extractor = TimeseriesExtractor(db=database_config.db, max_simulation_time=cfg.SIMULATION_END_TIME)
-    timeseries, labels, fraud_ids = timeseries_extractor.generate_timeseries(TIMESERIES_GEN_WINDOW_DURATION, ITEM_FEATURES, ITEM_TYPES)
+    timeseries, labels, fraud_ids, names = timeseries_extractor.generate_timeseries(TIMESERIES_GEN_WINDOW_DURATION, ITEM_FEATURES, ITEM_TYPES)
 
     np.save(STORAGE_PATH_TIMESERIES + rf'\rnn_timeseries_{TIMESERIES_GEN_WINDOW_DURATION}.npy', timeseries)
     np.save(STORAGE_PATH_TIMESERIES + rf'\rnn_labels_{TIMESERIES_GEN_WINDOW_DURATION}.npy', labels)
@@ -136,33 +136,37 @@ with tf.device('/CPU:0'):
     )
 
     model.summary()
-    plot_history(history, es_callback, f'GRU\nWindow Duration {TIMESERIES_GEN_WINDOW_DURATION}',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+    # apply_model_to_sap_data_timeseries(model, ITEM_FEATURES, ITEM_TYPES)
+
+    # model.save(cfg.STORAGE_BASE_PATH_MODELS + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}')
+    # plot_history(history, es_callback, f'GRU\nWindow Duration {TIMESERIES_GEN_WINDOW_DURATION}',
+    #              cfg.STORAGE_BASE_THESIS_IMG + rf'\rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
 
 
 # TEST MODEL ===========================================================================================================
-    all_predictions = K.argmax(model.predict(timeseries)).numpy().tolist()
-    test_predictions = K.argmax(model.predict(test_subjects)).numpy().tolist()
+#     all_predictions = K.argmax(model.predict(timeseries)).numpy().tolist()
+#     test_predictions = K.argmax(model.predict(test_subjects)).numpy().tolist()
+#
+#     all_predictions_df = pd.DataFrame({"Predicted": all_predictions,
+#                                        "True": labels,
+#                                        "Fraud IDs": fraud_ids})
+#
+#     all_predictions_df['is_correct'] = all_predictions_df['Predicted'] == all_predictions_df['True']
+#     all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+#     all_identified_cases = all_predictions_df[all_predictions_df['is_correct'] == True]['Fraud IDs']
+#
+#     test_predictions_df = pd.DataFrame({"Predicted": test_predictions,
+#                                         "True": labels[test_idx],
+#                                         "Fraud IDs": test_fraud_ids})
+#     test_predictions_df['is_correct'] = test_predictions_df['Predicted'] == test_predictions_df['True']
+#     test_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_test_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+#     all_identified_cases_test = test_predictions_df[test_predictions_df['is_correct'] == True]['Fraud IDs']
+#
+#     plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, labels,
+#                           cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+#     plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, labels[test_idx],
+#                           cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+#
+#     print('IDENTIFIED IN ALL: ', functools.reduce(aggregate_sets_multi, all_identified_cases.dropna(), set()))
+#     print('IDENTIFIED IN TEST: ', functools.reduce(aggregate_sets_multi, all_identified_cases_test.dropna(), set()))
 
-    all_predictions_df = pd.DataFrame({"Predicted": all_predictions,
-                                       "True": labels,
-                                       "Fraud IDs": fraud_ids})
-
-    all_predictions_df['is_correct'] = all_predictions_df['Predicted'] == all_predictions_df['True']
-    all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
-    all_identified_cases = all_predictions_df[all_predictions_df['is_correct'] == True]['Fraud IDs']
-
-    test_predictions_df = pd.DataFrame({"Predicted": test_predictions,
-                                        "True": labels[test_idx],
-                                        "Fraud IDs": test_fraud_ids})
-    test_predictions_df['is_correct'] = test_predictions_df['Predicted'] == test_predictions_df['True']
-    test_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_test_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
-    all_identified_cases_test = test_predictions_df[test_predictions_df['is_correct'] == True]['Fraud IDs']
-
-    plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, labels,
-                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
-    plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, labels[test_idx],
-                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_rnn_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
-
-    print('IDENTIFIED IN ALL: ', functools.reduce(aggregate_sets_multi, all_identified_cases.dropna(), set()))
-    print('IDENTIFIED IN TEST: ', functools.reduce(aggregate_sets_multi, all_identified_cases_test.dropna(), set()))

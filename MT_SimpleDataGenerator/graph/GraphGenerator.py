@@ -16,7 +16,7 @@ class GraphGenerator:
         self._fraud_node_color = fraud_node_color
 
     def generate_graphs(self, databases: List[Database]) -> GraphCollection:
-        return GraphCollection(list(map(lambda db: self.generate_graph(db), databases)))
+        return GraphCollection([g for g in list(map(lambda db: self.generate_graph(db), databases)) if len(g) > 0])
 
     def generate_graph(self, db: Database) -> Graph:
         print(f'generating graph for {db.get_name()}')

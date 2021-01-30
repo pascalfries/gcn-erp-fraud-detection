@@ -1,6 +1,12 @@
 from sklearn.metrics import confusion_matrix
+from sap.SapExtractor import SapExtractor
+from stellargraph.mapper import PaddedGraphGenerator
+from tensorflow.python.keras.utils.np_utils import to_categorical
+from timeseries.TimeseriesExtractor import TimeseriesExtractor
 
+import config as cfg
 import stellargraph as sg
+import keras.backend as K
 import tensorflow as tf
 import numpy as np
 import stellargraph.random as sgrand
@@ -122,3 +128,60 @@ def aggregate_sets(aggr, elem):
 def aggregate_sets_multi(aggr, set):
     aggr.update(set)
     return aggr
+
+
+def apply_model_to_sap_data(model, node_features, node_types):
+    sap_extractor = SapExtractor(cfg.STORAGE_BASE_SAP_DATA)
+    graphs = sap_extractor.extract_slices(cfg.SAP_DATA_WINDOW_DURATION, cfg.SAP_DATA_WINDOW_STRIDE)
+    graphs_stellar_with_gt = graphs.serialize_stellargraph(node_features, node_types)
+    graphs_stellar_with_gt = [g for g in graphs_stellar_with_gt if len(g[0]._nodes) > 0]
+
+    graphs_stellar = [item[0] for item in graphs_stellar_with_gt]
+    graph_labels = [item[1] for item in graphs_stellar_with_gt]
+    graph_names = [item[2] for item in graphs_stellar_with_gt]
+    all_gt = to_categorical(graph_labels)
+
+    sap_generator = PaddedGraphGenerator(graphs=graphs_stellar)
+    sap_sequence = sap_generator.flow(range(len(all_gt)), targets=all_gt, batch_size=1)
+
+    raw_predictions = model.predict(sap_sequence)
+    all_predictions = K.argmax(raw_predictions).numpy().tolist()
+    print(all_predictions)
+
+    all_predictions_df = pd.DataFrame({"Slice": graph_names,
+                       "Predicted is Fraud": all_predictions,
+                       "RAW": raw_predictions.tolist(),
+                                       "Labels": graph_labels})
+    all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_sap_gcn_graph.csv', sep=';')
+    plot_confusion_matrix('Confusion Matrix - SAP Data', all_predictions, graph_labels,
+                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_graph_sap.pdf')
+
+
+def apply_model_to_sap_data_timeseries(model, node_features, node_types):
+    item_feature_count = len(node_features) + len(node_types)
+    sap_extractor = SapExtractor(cfg.STORAGE_BASE_SAP_DATA)
+    db, min_time, max_time = sap_extractor.extract()
+
+    timeseries_extractor = TimeseriesExtractor(db=db, max_simulation_time=max_time, min_simulation_time=min_time)
+
+    timeseries, labels, _, names = timeseries_extractor.generate_timeseries(cfg.SAP_DATA_WINDOW_DURATION, node_features, node_types, window_stride=cfg.SAP_DATA_WINDOW_STRIDE)
+
+    timeseries[:, :, len(node_types):item_feature_count] = ((timeseries - np.nanmean(timeseries,
+                                                                                     axis=(0, 1))) / np.nanstd(
+    timeseries, axis=(0, 1)))[:, :, len(node_types):item_feature_count]
+    np.nan_to_num(timeseries, copy=False, nan=-1)
+
+    all_gt = to_categorical(labels)
+
+    raw_predictions = model.predict(timeseries)
+    all_predictions = K.argmax(raw_predictions).numpy().tolist()
+    print(all_predictions)
+
+    all_predictions_df = pd.DataFrame({"Slice": names,
+                       "Predicted is Fraud": all_predictions,
+                       "RAW": raw_predictions.tolist(),
+                                       "Labels": labels})
+    all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_sap_rnn.csv', sep=';')
+
+    plot_confusion_matrix('Confusion Matrix - SAP Data', all_predictions, labels,
+                              cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_rnn_sap.pdf')

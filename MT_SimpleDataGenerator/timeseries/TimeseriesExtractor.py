@@ -6,14 +6,16 @@ import numpy as np
 
 
 class TimeseriesExtractor:
-    def __init__(self, db: Database, max_simulation_time: int):
+    def __init__(self, db: Database, max_simulation_time: int, min_simulation_time: int = 0):
         self._db = db
         self._max_simulation_time = max_simulation_time
+        self._min_simulation_time = min_simulation_time
 
     # labels: 0: no_fraud, 1: fraud
-    def generate_timeseries(self, window_duration, attributes: List[str], types: List[str]) -> (np.ndarray, np.ndarray, List[set]):
-        db_slicer = DatabaseSlicer(db=self._db, max_simulation_time=self._max_simulation_time)
-        slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration)[1:] # test ignore 1st timestamp
+    def generate_timeseries(self, window_duration, attributes: List[str], types: List[str], window_stride: int = 1) -> (np.ndarray, np.ndarray, List[set], List[str]):
+        db_slicer = DatabaseSlicer(db=self._db, max_simulation_time=self._max_simulation_time, min_time=self._min_simulation_time)
+        slices = db_slicer.generate_slices_sliding_window(window_duration=window_duration, window_stride=window_stride)[1:] # test ignore 1st timestamp
+        slice_names = [g.get_name() for g in slices]
         fraud_ids = set()
         slices_lengths = [len(db.get_table('MTA_CHANGES').get_data()) for db in slices]
         max_slice_length = max(slices_lengths)
@@ -34,7 +36,7 @@ class TimeseriesExtractor:
             timeseries[index::] = series
             fraud_ids_all_timeseries.append(fraud_ids)
 
-        return timeseries, labels, fraud_ids_all_timeseries
+        return timeseries, labels, fraud_ids_all_timeseries, slice_names
 
     def serialize_timeseries(self, db: Database, max_slice_length, attributes: List[str], types: List[str]) -> (np.ndarray, str, set):
         feature_count = len(attributes) + len(types)

@@ -1,6 +1,10 @@
 from data.Database import Database
 from typing import Tuple
+from graph.GraphCollection import GraphCollection
+from graph.GraphGenerator import GraphGenerator
+from data.DatabaseSlicer import DatabaseSlicer
 
+import config as cfg
 import pandas as pd
 import database_config
 
@@ -23,6 +27,35 @@ class SapExtractor:
         self._min_time = 999_999_999_999
         self._max_time = 0
 
+        self._product_ids = {}
+        self._next_product_id = 0
+
+    def extract_slices(self, window_duration, window_stride) -> GraphCollection:
+        db, min_time, max_time = self.extract()
+
+        # slice data
+        print(f'MAX TIME: {self._max_time}')
+        db.save(cfg.STORAGE_ROOT_PATH + r'\sap_db')
+
+        data_slicer = DatabaseSlicer(db, max_simulation_time=max_time, min_time=min_time)
+        db_slices = data_slicer.generate_slices_sliding_window(window_duration, window_stride)
+
+        # generate graphs
+        graph_gen = GraphGenerator()
+        graphs = graph_gen.generate_graphs(db_slices)
+
+        graphs.prune(min_cluster_size=cfg.GRAPH_PRUNING_MIN_CLUSTER_SIZE)
+        graphs.save(cfg.STORAGE_BASE_PATH_PY_GRAPHS + rf'\sap')
+
+        with open(rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\sap\generate_graphs.bat', 'w') as graphviz_script:
+            for index, history_item in enumerate(graphs.get_raw_list()):
+                history_item.export_graphviz(
+                    rf'{cfg.STORAGE_BASE_PATH_GRAPHVIZ_GRAPHS}\sap\{history_item.get_name()}.txt')
+                print(f'dot -Tsvg {history_item.get_name()}.txt -o graph_{history_item.get_name()}.svg',
+                      file=graphviz_script)
+
+        return graphs
+
     def extract(self) -> Tuple[Database, int, int]:
         db = database_config.db
         db.disable_tracing()
@@ -31,17 +64,24 @@ class SapExtractor:
         self.extract_trc_sales(db)
         self.extract_mst_addresses(db)
         self.extract_mst_customers(db)
-        self.extract_tmr_sale_products(db)
+        self.extract_trm_sale_products(db)
         self.extract_mst_products(db)
         self.extract_mta_changes(db)
 
         return db, int(self._min_time), int(self._max_time)
 
+    def get_product_id_from_name(self, product_name: str) -> str:
+        if product_name not in self._product_ids:
+            self._product_ids[product_name] = self._next_product_id
+            self._next_product_id += 1
+
+        return str(self._product_ids[product_name])
+
     def extract_mst_products(self, db):
         tbl_products = db.get_table('MST_PRODUCTS')
 
         for index, sap_product in self._sap_mbew.iterrows():
-            tbl_products.insert_record_with_id(sap_product['Material'], [sap_product['Material'], sap_product['Standardpreis']])
+            tbl_products.insert_record_with_id(self.get_product_id_from_name(sap_product['Material']), [sap_product['Material'], sap_product['Standardpreis']])
 
     def extract_mta_changes(self, db):
         tbl_changes = db.get_table('MTA_CHANGES')
@@ -50,13 +90,17 @@ class SapExtractor:
             .merge(self._sap_cdhdr, on='Belegnummer')
 
         for index, sap_change in sap_cdpos_a306.iterrows():
-            tbl_changes.insert_record_with_id(index, ['MST_PRODUCTS.price', sap_change['MATNR'], 'update', sap_change['alter Wert'], sap_change['neuer Wert'], sap_change['Benutzer'], self.get_precise_datestamp(sap_change['Datum'], sap_change['Uhrzeit']), False, ''])
+            old_value = float(sap_change['alter Wert'])
+            new_value = float(sap_change['neuer Wert'])
+            is_fraud = True if old_value > 50 or old_value < 0.5 or new_value > 50 or new_value < 0.5 else False
 
-    def extract_tmr_sale_products(self, db: Database):
+            tbl_changes.insert_record_with_id(index, ['MST_PRODUCTS.price', self.get_product_id_from_name(sap_change['MATNR']), 'update', sap_change['alter Wert'], sap_change['neuer Wert'], sap_change['Benutzer'], self.get_precise_datestamp(sap_change['Datum'], sap_change['Uhrzeit']), is_fraud, ''])
+
+    def extract_trm_sale_products(self, db: Database):
         tbl_sale_products = db.get_table('TRM_SALE_PRODUCTS')
 
         for index, sap_purchase in self._sap_vbap.iterrows():
-            tbl_sale_products.insert_record([sap_purchase['Material'], sap_purchase['Verkaufsbeleg'], sap_purchase['Auftragsmenge'], self.get_precise_datestamp(sap_purchase['Angelegt am'], sap_purchase['Uhrzeit'])])
+            tbl_sale_products.insert_record([self.get_product_id_from_name(sap_purchase['Material']), sap_purchase['Verkaufsbeleg'], sap_purchase['Auftragsmenge'], self.get_precise_datestamp(sap_purchase['Angelegt am'], sap_purchase['Uhrzeit'])])
 
     def extract_trc_sales(self, db: Database):
         tbl_sales = db.get_table('TRC_SALES')

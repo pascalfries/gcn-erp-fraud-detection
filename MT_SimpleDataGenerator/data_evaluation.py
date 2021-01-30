@@ -319,8 +319,8 @@ def generate_plot_prices_over_time():
 
 
 if __name__ == '__main__':
-    generate_plot_product_changes_over_time()
-    generate_misc_changes_plots()
+    # generate_plot_product_changes_over_time()
+    # generate_misc_changes_plots()
     # generate_plot_customer_purchases_over_time()
-    generate_plot_salesperson_changes_over_time()
+    # generate_plot_salesperson_changes_over_time()
     generate_plot_prices_over_time()

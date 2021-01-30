@@ -7,7 +7,7 @@ from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from sklearn import model_selection
-from helpers import set_all_seeds, with_probability, plot_history, plot_confusion_matrix, aggregate_sets_multi
+from helpers import set_all_seeds, with_probability, plot_history, plot_confusion_matrix, aggregate_sets_multi, apply_model_to_sap_data
 from tensorflow.python.keras.utils.np_utils import to_categorical
 
 import tensorflow as tf
@@ -22,9 +22,9 @@ MAX_EPOCHS = 1_000
 TRAIN_SIZE_RELATIVE = 0.75
 VALIDATION_SIZE_RELATIVE_TEST = 0.60
 
-TIMESERIES_GEN_WINDOW_DURATION = 2
+TIMESERIES_GEN_WINDOW_DURATION = 3
 
-NODE_FEATURES = ['price', 'old_value', 'new_value', 'timestamp']
+NODE_FEATURES = ['price', 'old_value', 'new_value']
 NODE_TYPES = ['MST_PRODUCTS', 'MST_CUSTOMERS', 'MST_SALESPERSONS', 'TRC_SALES', 'MTA_CHANGES', 'TRM_SALE_PRODUCTS',
               'MST_ADDRESSES']
 
@@ -106,11 +106,6 @@ print(pd.DataFrame(graph_labels_test).value_counts().to_frame())
 
 
 # MAIN CODE ============================================================================================================
-# train_gt = pd.get_dummies(graph_labels_train, drop_first=True)
-# val_gt = pd.get_dummies(graph_labels_val, drop_first=True)
-# all_gt = pd.get_dummies(graph_labels_all, drop_first=True)
-# test_gt = pd.get_dummies(graph_labels_test, drop_first=True)
-#
 train_gt = to_categorical(graph_labels_train)
 val_gt = to_categorical(graph_labels_val)
 all_gt = to_categorical(graph_labels_all)
@@ -160,43 +155,43 @@ with tf.device('/CPU:0'):
         callbacks=[es_callback]
     )
 
-    plot_history(history, es_callback, f'Graph Level GCN\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
-                 cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
+    model.save(cfg.STORAGE_BASE_PATH_MODELS + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}')
+
+    # plot_history(history, es_callback, f'Graph Level GCN\n Window Duration {TIMESERIES_GEN_WINDOW_DURATION}',
+    #              cfg.STORAGE_BASE_THESIS_IMG + rf'\gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf', sma_size=10)
 
 # TEST MODEL ===========================================================================================================
-
-
     # all
-    all_predictions = K.argmax(model.predict(all_sequence)).numpy().tolist()
-    graph_names = [g[2] for g in graphs_gt_stellar]
-
-    all_predictions_df = pd.DataFrame({"Slice": graph_names,
-                       "Predicted is Fraud": all_predictions,
-                       "True is Fraud": graph_labels_all,
-                       "Fraud IDs": graph_fraud_id_all})
-    all_predictions_df['is_correct'] = all_predictions_df['Predicted is Fraud'] == all_predictions_df['True is Fraud']
-    all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
-
-    all_identified_cases = all_predictions_df[all_predictions_df['is_correct'] == True]['Fraud IDs']
-
-    plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, graph_labels_all,
-                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
-
-    # test
-    test_predictions = K.argmax(model.predict(test_sequence)).numpy().tolist()
-    graph_names = [g[2] for g in test_subjects]
-
-    test_predictions_df = pd.DataFrame({"Slice": graph_names,
-                       "Predicted is Fraud": test_predictions,
-                       "True is Fraud": graph_labels_test,
-                       "Fraud IDs": graph_fraud_id_test})
-    test_predictions_df['is_correct'] = test_predictions_df['Predicted is Fraud'] == test_predictions_df['True is Fraud']
-    test_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
-
-    all_identified_cases_test = test_predictions_df[test_predictions_df['is_correct'] == True]['Fraud IDs']
-
-    plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, graph_labels_test,
-                          cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
-
-    print('IDENTIFIED IN ALL: ', functools.reduce(aggregate_sets_multi, all_identified_cases.dropna(), set()))
-    print('IDENTIFIED IN TEST: ', functools.reduce(aggregate_sets_multi, all_identified_cases_test.dropna(), set()))
+    # all_predictions = K.argmax(model.predict(all_sequence)).numpy().tolist()
+    # graph_names = [g[2] for g in graphs_gt_stellar]
+    #
+    # all_predictions_df = pd.DataFrame({"Slice": graph_names,
+    #                    "Predicted is Fraud": all_predictions,
+    #                    "True is Fraud": graph_labels_all,
+    #                    "Fraud IDs": graph_fraud_id_all})
+    # all_predictions_df['is_correct'] = all_predictions_df['Predicted is Fraud'] == all_predictions_df['True is Fraud']
+    # all_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+    #
+    # all_identified_cases = all_predictions_df[all_predictions_df['is_correct'] == True]['Fraud IDs']
+    #
+    # plot_confusion_matrix('Confusion Matrix - All Data', all_predictions, graph_labels_all,
+    #                       cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_all_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+    #
+    # # test
+    # test_predictions = K.argmax(model.predict(test_sequence)).numpy().tolist()
+    # graph_names = [g[2] for g in test_subjects]
+    #
+    # test_predictions_df = pd.DataFrame({"Slice": graph_names,
+    #                    "Predicted is Fraud": test_predictions,
+    #                    "True is Fraud": graph_labels_test,
+    #                    "Fraud IDs": graph_fraud_id_test})
+    # test_predictions_df['is_correct'] = test_predictions_df['Predicted is Fraud'] == test_predictions_df['True is Fraud']
+    # test_predictions_df.to_csv(cfg.STORAGE_ROOT_PATH + rf'\results_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.csv', sep=';')
+    #
+    # all_identified_cases_test = test_predictions_df[test_predictions_df['is_correct'] == True]['Fraud IDs']
+    #
+    # plot_confusion_matrix('Confusion Matrix - Test Data', test_predictions, graph_labels_test,
+    #                       cfg.STORAGE_BASE_THESIS_IMG + rf'\conf_matrix_test_gcn_graph_{TIMESERIES_GEN_WINDOW_DURATION}.pdf')
+    #
+    # print('IDENTIFIED IN ALL: ', functools.reduce(aggregate_sets_multi, all_identified_cases.dropna(), set()))
+    # print('IDENTIFIED IN TEST: ', functools.reduce(aggregate_sets_multi, all_identified_cases_test.dropna(), set()))
